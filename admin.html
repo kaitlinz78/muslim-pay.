@@ -58,108 +58,213 @@ td{padding:16px;border-bottom:1px solid #e8f0f9;color:#3d5c81}tr:last-child td{b
 @media(max-width:760px){.shell{display:block}aside{flex-direction:row;align-items:center;justify-content:space-between;gap:8px;padding:12px 14px;border-right:0;border-bottom:1px solid #d3e3f7}.brand{font-size:16px}.brand small{font-size:8px}.side-title,.side-foot{display:none}.nav{font-size:11px;padding:10px}.topbar{height:60px;padding:0 15px}.top-title{font-size:12px}.page{padding:20px 13px 48px}.card{padding:17px 13px}.metrics{gap:9px}.metric{padding:13px;border-radius:15px}.metric strong{font-size:20px}.metric small{font-size:10px}.search{width:100%;min-width:0}.actions{width:100%}.actions .btn{flex:1}thead{display:none}.tablewrap{border:0;background:none;overflow:visible}table,tbody,tr,td{display:block;width:100%}tbody{display:grid;gap:10px}tr{background:#fff;border:1px solid #deebfa;border-radius:14px;padding:9px 12px;box-shadow:0 4px 10px #286fba0a}td{border:0;border-bottom:1px solid #edf2fa!important;padding:9px 0;display:flex;align-items:center;justify-content:space-between;gap:10px;text-align:right;min-height:35px}td:before{content:attr(data-label);text-align:left;color:#8098b4;font-size:10px;font-weight:800;min-width:30%}td:last-child{border:0!important}.rules{grid-template-columns:1fr}.history-row{grid-template-columns:1fr;gap:4px}}
 @media(prefers-reduced-motion:reduce){*,*:before,*:after{transition:none!important}}
 </style>
+<style id="ice-owner-auth-css">
+/* Owner application: private actions require verified server session */
+html:not(.owner-authenticated) .shell{display:none!important}
+#owner-login-overlay{position:fixed;inset:0;z-index:900;display:grid;place-items:center;padding:15px;background:radial-gradient(circle at 30% 5%,#d7ebff,#f4f8ff 70%)}
+.owner-login-card{width:min(100%,415px);padding:27px;background:linear-gradient(140deg,#fff,#edf6ff);border:1px solid white;border-radius:24px;box-shadow:0 20px 60px #2a5d9e20}
+.owner-login-card h1{font-size:27px}.owner-login-card p{font-size:12px;line-height:1.8;color:#8296ad}
+.owner-login-card label{display:block;color:#607f9f;font-size:12px;font-weight:800;margin:12px 0 7px}
+.owner-login-card input{width:100%;min-height:46px;border-radius:13px;border:1px solid #ccdef4;background:#fff;padding:11px 13px}
+.owner-login-card button{width:100%;margin-top:18px}
+.owner-login-error{color:#b94c63;font-size:12px;margin:12px 0 0;line-height:1.6;min-height:18px}
+.owner-logout{border-radius:13px;border:1px solid #cfe0f5;background:#fff;color:#2963ac;padding:10px 13px;font-size:12px;font-weight:800;cursor:pointer}
+.tabs{display:flex;gap:9px;background:#e7f2ff;border:1px solid #d4e6fb;border-radius:16px;padding:6px;margin-bottom:22px;width:fit-content;max-width:100%}
+.tabs button{background:transparent;border:1px solid transparent;color:#557daa;padding:12px 17px;border-radius:12px;font-size:13px;font-weight:800;white-space:normal;cursor:pointer}
+.tabs button.active{background:#fff;color:#2563eb;border-color:#d6e7fb;box-shadow:0 3px 10px #236bbb16}
+.owner-form{max-width:650px;display:grid;gap:13px}.owner-field{display:grid;gap:7px;color:#6884a4;font-weight:800;font-size:12px}
+.owner-field input,.owner-field textarea{width:100%;border:1px solid #d2e2f6;background:#fff;border-radius:13px;padding:12px 14px;font-size:14px;color:#254c7e;outline-color:#a3cbff}
+.owner-field textarea{resize:vertical;min-height:90px}.owner-field small{font-weight:500;color:#8d9fb3;font-size:11px}
+.owner-form-footer{display:flex;align-items:center;flex-wrap:wrap;gap:13px;margin:7px 0 0}
+.owner-message{font-size:12px;line-height:1.65;color:#51789e;min-height:16px}.owner-message.error{color:#b6495e}.owner-message.success{color:#15836b}
+.owner-card-note{font-size:12px;color:#7188a7;line-height:1.65}
+.owner-pill{display:inline-flex;border-radius:30px;padding:5px 9px;font-size:11px;font-weight:800;background:#e5f7f0;color:#16856f}
+.owner-pill.off{background:#fae8ed;color:#bb5266}
+.owner-grid-form{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-top:15px}
+.owner-grid-form .wide{grid-column:1/-1}
+.owner-banner{padding:13px;background:#e8f5ff;border:1px solid #cae3fb;border-radius:14px;color:#5178a6;font-size:12px;line-height:1.65;margin-bottom:20px}
+.owner-header-controls{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+.owner-tab-panel[hidden]{display:none!important}
+@media(max-width:760px){.tabs{width:100%}.tabs button{flex:1;padding:10px;font-size:12px}.owner-grid-form{grid-template-columns:1fr}.owner-grid-form .wide{grid-column:auto}.owner-header-controls{gap:6px}.owner-logout{font-size:11px;padding:8px}.owner-login-card{padding:23px}}
+</style>
 </head>
+
 <body>
+<div id="owner-login-overlay">
+  <div class="owner-login-card">
+    <div class="brand">ICE PAY <small>OWNER ADMIN</small></div>
+    <h1>Вход владельца</h1>
+    <p>Управление трейдерами доступно только владельцу Ice Pay. Авторизация проверяется сервером.</p>
+    <form id="owner-login-form">
+      <label for="owner-username">Логин Owner</label>
+      <input id="owner-username" name="username" autocomplete="username" value="owner" required>
+      <label for="owner-password">Пароль</label>
+      <input id="owner-password" name="password" type="password" autocomplete="current-password" required>
+      <button class="btn primary" type="submit">Войти в админку</button>
+    </form>
+    <div id="owner-login-error" class="owner-login-error" role="alert"></div>
+    <p>Создание логинов, паролей и Memo работает после подключения серверной базы данных.</p>
+  </div>
+</div>
 <div class="shell">
-<aside>
-<div class="logo"><span class="mark">I</span><div class="brand">ICE PAY<small>OWNER · ADMIN</small></div></div>
-<div><div class="side-title">УПРАВЛЕНИЕ</div><div class="nav"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="3"/><circle cx="9" cy="9" r="2"/><path d="M7 16h10m-3-9h4"/></svg><span>Пользователи и Memo</span></div></div>
-<div class="side-foot"><strong>Отдельная админ-площадка</strong>Эта страница не встроена в сайт трейдеров. Сейчас все данные тестовые и хранятся в браузере.</div>
-</aside>
-<main>
-<header class="topbar"><div class="top-title">Ice Pay / Управление TON Memo</div><span class="role">DEMO · НЕЗАЩИЩЁННЫЙ ПРОТОТИП</span></header>
-<div class="page">
-<h1>Пользователи и Memo</h1><p class="subtitle">Настройка идентификаторов для будущих пополнений TON</p><div class="rule"></div>
-<div class="alert"><strong>Демонстрационная админка — не для реальных платежей</strong>Пока нет серверного входа Owner и общей базы клиентов. Memo здесь сохраняются только в этом браузере; изменение не влияет на реальные счета и не включает автозачисление TON. Не используйте эти Memo для переводов.</div>
-<div class="metrics"><div class="metric"><small>Тестовые клиенты</small><strong id="metric-users">0</strong></div><div class="metric"><small>Активные Memo</small><strong id="metric-memo">0</strong></div><div class="metric"><small>Изменений Memo</small><strong id="metric-changes">0</strong></div></div>
-<section class="card"><div class="card-head"><h2>Управление Memo</h2><div class="actions"><input class="search" id="search" placeholder="Поиск по клиенту или Memo" aria-label="Поиск по клиентам"><button class="btn primary" id="add-user">+ Добавить клиента</button></div></div>
-<p class="description">Для каждого тестового клиента автоматически генерируется уникальный Memo. Нажмите «Изменить», чтобы назначить свой. Старые значения остаются зарезервированными и сохраняются в истории.</p>
-<div class="tablewrap"><table><thead><tr><th>Клиент</th><th>Memo TON</th><th>Создан</th><th>Действия</th></tr></thead><tbody id="users-body"></tbody></table></div>
-</section>
-<section class="card"><h2>Правила Memo</h2><div class="rules" style="margin-top:14px"><div class="rule-card"><strong>Уникальность</strong><p>Каждому клиенту присваивается собственный идентификатор без повторений.</p></div><div class="rule-card"><strong>Редактирование</strong><p>После замены старый Memo сохраняется в истории и не назначается другому клиенту.</p></div><div class="rule-card"><strong>Автозачисление</strong><p>Для запуска потребуется серверная авторизация, постоянная база и проверка платежей TON.</p></div></div></section>
-<section class="card"><div class="card-head"><h2>История изменений</h2><button class="btn" id="export" type="button">Экспорт CSV</button></div><div class="muted" id="history"></div></section>
-</div></main></div><div id="dialog-root"></div>
+  <aside>
+    <div class="logo"><span class="mark">I</span><div class="brand">ICE PAY<small>OWNER · ADMIN</small></div></div>
+    <div><div class="side-title">УПРАВЛЕНИЕ</div><div class="nav"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><rect x="3" y="3" width="18" height="18" rx="3"/><circle cx="9" cy="9" r="2"/><path d="M7 16h10m-3-9h4"/></svg><span>Трейдеры и Memo</span></div></div>
+    <div class="side-foot"><strong>Owner · защищённый доступ</strong>Логины и пароли хранятся на сервере. Финансовые балансы Ice Pay пока демонстрационные.</div>
+  </aside>
+  <main>
+    <header class="topbar"><div class="top-title">Ice Pay / Управление трейдерами</div><div class="owner-header-controls"><span class="role" id="owner-identity">OWNER</span><button id="owner-password-btn" class="owner-logout" type="button">Сменить пароль</button><button class="owner-logout" id="owner-logout" type="button">Выйти</button></div></header>
+    <div class="page">
+      <h1>Управление трейдерами</h1>
+      <p class="subtitle">Отдельная админ-панель Ice Pay Owner</p><div class="rule"></div>
+      <div class="owner-banner"><strong>Серверные аккаунты и токены доступа.</strong> Owner создаёт трейдерам индивидуальные логины и пароли. После входа трейдер получает ограниченный по времени токен сессии. Реальные платежи и денежный баланс здесь не подключены.</div>
+      <div class="tabs" role="tablist" aria-label="Разделы админки">
+        <button type="button" data-tab="add" class="active" role="tab" aria-selected="true">1. Добавить трейдера</button>
+        <button type="button" data-tab="memo" role="tab" aria-selected="false">2. Изменить Memo</button>
+      </div>
+      <section class="card owner-tab-panel" id="tab-add">
+        <div class="card-head"><h2>Добавить нового трейдера</h2></div>
+        <p class="description">Укажи индивидуальные данные для входа на <a href="https://muslim-pay.onrender.com" target="_blank" rel="noopener noreferrer">сайт Ice Pay</a>. После создания трейдер сможет войти с указанным логином и паролем.</p>
+        <form id="new-trader-form" class="owner-form">
+          <label class="owner-field">Логин трейдера<input name="username" autocomplete="off" spellcheck="false" minlength="4" maxlength="32" placeholder="например, trader001" required pattern="[a-z][a-z0-9_.-]{3,31}"><small>Латинские буквы, цифры, дефис, точка. Логин должен быть уникальным.</small></label>
+          <label class="owner-field">Пароль<input name="password" type="password" minlength="12" maxlength="128" autocomplete="new-password" placeholder="Придумай надёжный пароль" required><small>Не меньше 12 символов. Пароль нельзя будет просмотреть после сохранения, но можно будет заменить.</small></label>
+          <label class="owner-field">Заметка<textarea name="note" maxlength="500" placeholder="Например: имя трейдера, условия сотрудничества, комментарий"></textarea></label>
+          <div class="owner-form-footer"><button class="btn primary" type="submit">+ Создать трейдера</button><span id="create-message" class="owner-message" role="status"></span></div>
+        </form>
+      </section>
+      <section class="card owner-tab-panel" id="tab-memo" hidden>
+        <div class="card-head"><h2>Трейдеры и персональные Memo</h2><div class="actions"><input id="trader-search" class="search" placeholder="Поиск логина или Memo" aria-label="Поиск трейдера"><button id="refresh-traders" type="button" class="btn">Обновить</button></div></div>
+        <p class="description">Memo создаётся автоматически вместе с аккаунтом. Можно назначить своё значение, сбросить пароль или временно отключить вход трейдера. Старые Memo остаются зарезервированными.</p>
+        <div class="tablewrap"><table><thead><tr><th>Трейдер</th><th>Заметка</th><th>Memo</th><th>Статус</th><th>Действия</th></tr></thead><tbody id="trader-rows"><tr><td colspan="5" class="empty">Загрузка…</td></tr></tbody></table></div>
+        <div class="history" id="admin-memo-history"></div>
+      </section>
+      <p class="muted">Авторизация не делает демоверсию платёжной системой. Для пополнений и реальных балансов нужна отдельная защищённая бухгалтерия.</p>
+    </div>
+  </main>
+</div><div id="dialog-root"></div>
 <script>
 (()=>{
 'use strict';
-const KEY='ice-pay-owner-memo-demo-v1';
-const ABC='23456789ABCDEFGHJKLMNPQRSTUVWXYZ';
+const API='https://ice-pay-auth.onrender.com',TOKEN='ice-pay-owner-token';
 const el=id=>document.getElementById(id);
-const escape=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-function seed(){
-  const state={users:[],history:[]};
-  for(let n=1;n<=3;n++)state.users.push({id:'DEMO-'+String(n).padStart(4,'0'),name:'Тестовый клиент '+n,memo:unique(state),past:[],createdAt:new Date().toISOString()});
-  return state;
+const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+let traders=[],activeTab='add';
+async function api(path,method='GET',data){
+ const token=sessionStorage.getItem(TOKEN);
+ const ctl=new AbortController(),timer=setTimeout(()=>ctl.abort(),18000);
+ try{
+  const response=await fetch(API+path,{method,headers:{'Content-Type':'application/json',...(token?{Authorization:'Bearer '+token}:{})},body:data===undefined?undefined:JSON.stringify(data),cache:'no-store',signal:ctl.signal});
+  let json={};try{json=await response.json()}catch{}
+  if(response.status===401&&path!=='/v1/auth/login'){sessionStorage.removeItem(TOKEN);document.documentElement.classList.remove('owner-authenticated');el('owner-login-overlay').style.display='grid';}
+  if(!response.ok)throw Error(json.error||'Сервер недоступен');
+  return json;
+ }finally{clearTimeout(timer)}
 }
-function load(){try{const s=JSON.parse(localStorage.getItem(KEY));if(s&&Array.isArray(s.users)&&Array.isArray(s.history))return s}catch{}return seed()}
-let state=load();
-function save(){try{localStorage.setItem(KEY,JSON.stringify(state))}catch(e){alert('Не удалось сохранить демонстрационные данные в браузере')}}
-function taken(v,exclude=''){
- const k=v.toUpperCase();
- return state.users.some(u=>(u.id!==exclude&&u.memo.toUpperCase()===k)||(u.past||[]).some(x=>x.memo.toUpperCase()===k));
+function msg(id,text,error=false){const target=el(id);if(!target)return;target.textContent=text;target.className='owner-message '+(error?'error':'success')}
+function showOwner(account){
+ if(account.role!=='owner')throw Error('Только Owner может открыть эту страницу');
+ document.documentElement.classList.add('owner-authenticated');
+ el('owner-login-overlay').style.display='none';el('owner-identity').textContent='OWNER · '+account.username;
+ loadTraders().catch(e=>msg('create-message',e.message,true));
 }
-function unique(obj=state){
- const used=new Set(obj.users.flatMap(u=>[u.memo,...(u.past||[]).map(x=>x.memo)].map(x=>x.toUpperCase())));
- const source=globalThis.crypto;
- if(!source?.getRandomValues)throw Error('Генератор случайных чисел недоступен');
- for(let retry=0;retry<64;retry++){
-  const bytes=new Uint8Array(12);source.getRandomValues(bytes);
-  const memo='ICE-'+Array.from(bytes,n=>ABC[n%ABC.length]).join('');
-  if(!used.has(memo.toUpperCase()))return memo;
+async function resume(){
+ if(!sessionStorage.getItem(TOKEN))return;
+ try{const d=await api('/v1/auth/me');showOwner(d.account)}catch{sessionStorage.removeItem(TOKEN);}
+}
+el('owner-login-form').onsubmit=async e=>{
+ e.preventDefault();const btn=e.target.querySelector('button[type=submit]');btn.disabled=true;el('owner-login-error').textContent='';
+ try{
+  const f=new FormData(e.target);
+  const d=await api('/v1/auth/login','POST',{username:String(f.get('username')).trim().toLowerCase(),password:f.get('password'),role:'owner'});
+  if(d.account?.role!=='owner'||!d.token)throw Error('Доступ запрещён');
+  sessionStorage.setItem(TOKEN,d.token);showOwner(d.account);
+ }catch(error){el('owner-login-error').textContent=error.message==='Failed to fetch'?'Сервис авторизации пока недоступен':error.message}
+ finally{btn.disabled=false}
+};
+el('owner-logout').onclick=()=>{
+ const token=sessionStorage.getItem(TOKEN);
+ sessionStorage.removeItem(TOKEN);
+ if(token)fetch(API+'/v1/auth/logout',{method:'POST',headers:{Authorization:'Bearer '+token}}).catch(()=>{});
+ location.reload();
+};
+function switchTab(tab){
+ activeTab=tab;
+ for(const name of ['add','memo']){
+  el('tab-'+name).hidden=name!==tab;
+  const button=document.querySelector('[data-tab="'+name+'"]');
+  button.classList.toggle('active',name===tab);button.setAttribute('aria-selected',String(name===tab));
  }
- throw Error('Не удалось создать Memo');
+ if(tab==='memo')loadTraders().catch(e=>{el('trader-rows').innerHTML='<tr><td class="empty" colspan="5">'+esc(e.message)+'</td></tr>'});
 }
-function fmt(d){const t=new Date(d);return isNaN(t)?'—':t.toLocaleString('ru-RU',{day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit'})}
-function render(){
- const query=el('search').value.trim().toLowerCase();
- const matches=state.users.filter(u=>(u.name+' '+u.id+' '+u.memo).toLowerCase().includes(query));
- el('metric-users').textContent=state.users.length;el('metric-memo').textContent=state.users.filter(x=>!!x.memo).length;el('metric-changes').textContent=state.history.length;
- el('users-body').innerHTML=matches.map(u=>'<tr><td data-label="Клиент"><div><span class="name">'+escape(u.name)+'</span><span class="user-id">'+escape(u.id)+'</span></div></td><td data-label="Memo"><code class="code">'+escape(u.memo)+'</code></td><td data-label="Создан">'+fmt(u.createdAt)+'</td><td data-label="Действия"><div class="tools"><button class="btn" data-edit="'+escape(u.id)+'">Изменить Memo</button><button class="btn" data-copy="'+escape(u.id)+'">Копировать</button></div></td></tr>').join('')||'<tr><td class="empty" colspan="4">Нет клиентов по заданному поиску</td></tr>';
- el('history').innerHTML=state.history.length?'<div class="history">'+state.history.slice(0,25).map(h=>'<div class="history-row"><span><strong>'+escape(h.name)+'</strong> · '+fmt(h.at)+'</span><span>'+escape(h.oldMemo)+' → '+escape(h.newMemo)+'</span><span>'+escape(h.reason||'Без комментария')+'</span></div>').join('')+'</div>':'Изменений пока нет';
+document.querySelectorAll('[data-tab]').forEach(btn=>btn.onclick=()=>switchTab(btn.dataset.tab));
+el('new-trader-form').onsubmit=async e=>{
+ e.preventDefault();const b=e.target.querySelector('[type=submit]');b.disabled=true;msg('create-message','');
+ try{
+  const f=new FormData(e.target);
+  const p={username:String(f.get('username')).trim().toLowerCase(),password:f.get('password'),note:String(f.get('note')).trim()};
+  const data=await api('/v1/admin/traders','POST',p);
+  msg('create-message','Трейдер '+data.trader.username+' создан; Memo '+data.trader.memo+'. Логин и пароль действуют для входа.',false);
+  e.target.reset();
+  await loadTraders();
+ }catch(error){msg('create-message',error.message,true)}
+ finally{b.disabled=false}
+};
+function date(v){return v?new Date(v).toLocaleString('ru-RU',{day:'2-digit',month:'2-digit',year:'numeric'}):'—'}
+function drawTraders(){
+ const query=el('trader-search').value.trim().toLowerCase();
+ const list=traders.filter(t=>[t.username,t.memo,t.note].some(x=>String(x||'').toLowerCase().includes(query)));
+ el('trader-rows').innerHTML=list.map(t=>'<tr><td data-label="Трейдер"><div><span class="name">'+esc(t.username)+'</span><span class="user-id">'+esc(t.id)+'</span></div></td><td data-label="Заметка"><span class="owner-card-note">'+esc(t.note||'—')+'</span></td><td data-label="Memo"><code class="code">'+esc(t.memo||'—')+'</code></td><td data-label="Статус"><span class="owner-pill '+(t.active?'':'off')+'">'+(t.active?'Активен':'Отключён')+'</span></td><td data-label="Действия"><div class="tools"><button class="btn" data-edit="'+esc(t.id)+'">Изменить Memo</button><button class="btn" data-password="'+esc(t.id)+'">Пароль</button><button class="btn" data-status="'+esc(t.id)+'">'+(t.active?'Отключить':'Включить')+'</button></div></td></tr>').join('')||'<tr><td colspan="5" class="empty">Трейдеров нет</td></tr>';
 }
-function close(){el('dialog-root').replaceChildren()}
-function edit(id){
- const u=state.users.find(u=>u.id===id);if(!u)return;
- const old=(u.past||[]).slice().reverse().map(p=>'<p><code>'+escape(p.memo)+'</code> · '+fmt(p.at)+'</p>').join('');
- el('dialog-root').innerHTML='<div class="overlay" data-close><section class="dialog" role="dialog" aria-modal="true" aria-label="Изменить Memo"><div class="dialog-top"><h2>Изменить TON Memo</h2><button type="button" class="x" data-close-btn aria-label="Закрыть">×</button></div><div class="muted">'+escape(u.name)+' · '+escape(u.id)+'</div><form id="memo-form"><label class="form-group">Новый Memo<input id="new-memo" name="memo" value="'+escape(u.memo)+'" minlength="6" maxlength="40" required spellcheck="false" autocomplete="off"></label><div class="input-actions"><button type="button" class="btn" id="generate-memo">Сгенерировать</button></div><label class="form-group">Причина изменения<input name="reason" maxlength="120" placeholder="Например, индивидуальные условия"></label><div id="validation" class="validation" role="alert"></div><div class="form-actions"><button type="button" class="btn" data-close-btn>Отмена</button><button type="submit" class="btn primary">Сохранить Memo</button></div></form>'+(old?'<details class="history-details"><summary>Старые Memo ('+u.past.length+')</summary>'+old+'</details>':'')+'</section></div>';
- el('generate-memo').onclick=()=>{el('new-memo').value=unique();el('new-memo').focus()};
- el('memo-form').onsubmit=e=>{
-  e.preventDefault();
-  const data=new FormData(e.target);const next=String(data.get('memo')||'').trim();
-  if(!/^[A-Za-z0-9][A-Za-z0-9_-]{5,39}$/.test(next)){el('validation').textContent='От 6 до 40 символов: латиница, цифры, - и _';return}
-  if(next.toUpperCase()===u.memo.toUpperCase()){el('validation').textContent='Этот Memo уже назначен';return}
-  if(taken(next,u.id)){el('validation').textContent='Memo используется или уже был назначен. Выберите другой';return}
-  const at=new Date().toISOString();const oldMemo=u.memo;
-  u.past ||= [];u.past.push({memo:oldMemo,at});u.memo=next;
-  const reason=String(data.get('reason')||'').trim();state.history.unshift({id:u.id,name:u.name,oldMemo,newMemo:next,at,reason});
-  save();close();render();
+async function loadTraders(){
+ const d=await api('/v1/admin/traders');
+ traders=d.traders||[];drawTraders();
+ if(activeTab==='memo'){
+  const h=await api('/v1/admin/memo-history');
+  const records=h.history||[];
+  el('admin-memo-history').innerHTML='<h3>История изменений Memo</h3>'+(!records.length?'<span class="muted">Пока изменений нет.</span>':records.slice(0,20).map(x=>'<div class="history-row"><strong>'+esc(x.username)+'</strong><span>'+esc(x.oldMemo)+' → '+esc(x.newMemo)+'</span><span>'+date(x.changedAt)+' · '+esc(x.reason||'')+'</span></div>').join(''));
+ }
+}
+function dialog(title,body,onSubmit){
+ const root=el('dialog-root');
+ root.innerHTML='<div class="overlay" data-close-overlay><section class="dialog" role="dialog" aria-modal="true" aria-label="'+esc(title)+'"><div class="dialog-top"><h2>'+esc(title)+'</h2><button type="button" class="x" data-close-dialog>×</button></div><form id="owner-dialog-form">'+body+'<div class="validation" id="dialog-error" role="alert"></div><div class="form-actions"><button type="button" class="btn" data-close-dialog>Отмена</button><button type="submit" class="btn primary">Сохранить</button></div></form></section></div>';
+ const form=el('owner-dialog-form');form.onsubmit=async e=>{
+  e.preventDefault();const b=form.querySelector('[type=submit]');b.disabled=true;el('dialog-error').textContent='';
+  try{await onSubmit(new FormData(form));root.replaceChildren();await loadTraders()}
+  catch(error){el('dialog-error').textContent=error.message}
+  finally{b.disabled=false}
  };
 }
-el('add-user').onclick=()=>{
- let name=prompt('Название тестового клиента (это не настоящий аккаунт):','Новый клиент');
- if(name===null)return;
- name=name.trim();
- if(!name||name.length>64){alert('Укажите имя до 64 символов');return}
- const id='DEMO-'+Date.now().toString(36).toUpperCase()+'-'+Math.floor(Math.random()*10000).toString().padStart(4,'0');
- state.users.unshift({id,name,memo:unique(),past:[],createdAt:new Date().toISOString()});save();render();
-};
-el('users-body').onclick=async e=>{
- const editButton=e.target.closest('[data-edit]');if(editButton){edit(editButton.dataset.edit);return}
- const copy=e.target.closest('[data-copy]');if(copy){
-  const u=state.users.find(u=>u.id===copy.dataset.copy);if(!u)return;
-  try{await navigator.clipboard.writeText(u.memo);copy.textContent='Скопировано'}catch{alert('Memo: '+u.memo)}
+el('trader-rows').onclick=async e=>{
+ const t=e.target.closest('[data-edit],[data-password],[data-status]');
+ if(!t)return;
+ const id=t.dataset.edit||t.dataset.password||t.dataset.status;
+ const trader=traders.find(x=>x.id===id);if(!trader)return;
+ if(t.hasAttribute('data-edit')){
+  dialog('Изменить Memo · '+trader.username,
+   '<p class="description">Текущий Memo: <code class="code">'+esc(trader.memo)+'</code></p><label class="owner-field">Новый Memo<input name="memo" minlength="6" maxlength="40" required value="'+esc(trader.memo)+'"></label><label class="owner-field">Причина изменения<input name="reason" maxlength="120" placeholder="Например, индивидуальный Memo"></label>',
+   f=>api('/v1/admin/traders/'+id+'/memo','PATCH',{memo:String(f.get('memo')).trim(),reason:String(f.get('reason')).trim()}));
+ }else if(t.hasAttribute('data-password')){
+  dialog('Сменить пароль · '+trader.username,
+  '<label class="owner-field">Новый пароль трейдера<input name="password" type="password" minlength="12" maxlength="128" required autocomplete="new-password"></label><p class="description">После замены все прежние сессии трейдера будут завершены.</p>',
+  f=>api('/v1/admin/traders/'+id+'/password','PATCH',{password:f.get('password')}));
+ }else{
+  if(!confirm((trader.active?'Отключить':'Включить')+' вход трейдера '+trader.username+'?'))return;
+  try{await api('/v1/admin/traders/'+id+'/status','PATCH',{active:!trader.active});await loadTraders()}
+  catch(err){alert(err.message)}
  }
 };
-el('dialog-root').onclick=e=>{if(e.target.hasAttribute('data-close')||e.target.closest('[data-close-btn]'))close()};
-document.addEventListener('keydown',e=>{if(e.key==='Escape')close()});
-el('search').oninput=render;
-el('export').onclick=()=>{
- const rows=[['Клиент','ID','Текущий Memo','Архивные Memo'],...state.users.map(u=>[u.name,u.id,u.memo,(u.past||[]).map(x=>x.memo).join(' | ')])];
- const csv='\ufeff'+rows.map(row=>row.map(v=>'"'+String(v).replace(/"/g,'""')+'"').join(';')).join('\r\n');
- const blob=new Blob([csv],{type:'text/csv;charset=utf-8'}),url=URL.createObjectURL(blob),a=document.createElement('a');
- a.href=url;a.download='ice-pay-memo-demo.csv';a.click();setTimeout(()=>URL.revokeObjectURL(url),1000);
+el('owner-password-btn').onclick=()=>{
+ dialog('Сменить пароль Owner',
+ '<label class="owner-field">Текущий пароль<input name="current" type="password" required autocomplete="current-password"></label><label class="owner-field">Новый пароль Owner<input name="next" type="password" minlength="12" required autocomplete="new-password"></label>',
+ async f=>{await api('/v1/auth/change-password','POST',{currentPassword:f.get('current'),newPassword:f.get('next')});sessionStorage.removeItem(TOKEN);location.reload()});
 };
-save();render();
+el('dialog-root').onclick=e=>{
+ if(e.target.closest('[data-close-dialog]')||e.target.hasAttribute('data-close-overlay'))el('dialog-root').replaceChildren();
+};
+el('refresh-traders').onclick=()=>loadTraders().catch(e=>alert(e.message));
+el('trader-search').oninput=drawTraders;
+document.addEventListener('keydown',e=>{if(e.key==='Escape')el('dialog-root').replaceChildren()});
+resume();
 })();
 </script>
 </body>
