@@ -212,31 +212,46 @@ $('#open-menu').addEventListener('click',openSidebar);$('#sidebar-close').addEve
 <script id="ice-pay-rapira-live">
 (() => {
   'use strict';
-  const endpoint='https://api.rapira.net/open/market/rates';
+  const direct='https://api.rapira.net/open/market/rates';
+  const proxy='https://ice-pay-rates.onrender.com/rate';
   const rate={text:'Загрузка курса…',note:'Продажа USDT · Rapira'};
+  let preferProxy=false,loading=false;
   function paint(){
     for(const el of document.querySelectorAll('[data-rapira-rate]'))if(el.textContent!==rate.text)el.textContent=rate.text;
     for(const el of document.querySelectorAll('[data-rapira-status]'))if(el.textContent!==rate.note)el.textContent=rate.note;
   }
-  async function refreshRate(){
-    if(!navigator.onLine){rate.text='Курс недоступен';rate.note='Нет подключения · Rapira';paint();return;}
+  async function loadJson(url,timeout){
+    const controller=new AbortController(),timer=setTimeout(()=>controller.abort(),timeout);
     try{
-      const controller=new AbortController(),timer=setTimeout(()=>controller.abort(),10000);
-      let response;
-      try{response=await fetch(endpoint,{method:'GET',mode:'cors',cache:'no-store',headers:{Accept:'application/json'},signal:controller.signal});}
-      finally{clearTimeout(timer);}
-      if(!response.ok)throw new Error('Rapira HTTP '+response.status);
-      const payload=await response.json();
-      const pair=Array.isArray(payload?.data)?payload.data.find(x=>x.symbol==='USDT/RUB'):null;
-      const bid=Number(pair?.bidPrice);
-      if(!Number.isFinite(bid)||bid<=0||bid>10000)throw new Error('Invalid USDT/RUB bid');
+      const response=await fetch(url,{method:'GET',mode:'cors',cache:'no-store',headers:{Accept:'application/json'},signal:controller.signal});
+      if(!response.ok)throw new Error('Rate source HTTP '+response.status);
+      return await response.json();
+    }finally{clearTimeout(timer);}
+  }
+  function readBid(data){
+    const row=Array.isArray(data?.data)?data.data.find(x=>x.symbol==='USDT/RUB'):data;
+    if(!row||row.symbol!=='USDT/RUB')throw new Error('Pair USDT/RUB absent');
+    const bid=Number(row.bidPrice);
+    if(!Number.isFinite(bid)||bid<=0||bid>10000)throw new Error('Invalid Rapira bidPrice');
+    return bid;
+  }
+  async function refreshRate(){
+    if(loading)return;
+    if(!navigator.onLine){rate.text='Курс недоступен';rate.note='Нет подключения · Rapira';paint();return;}
+    loading=true;
+    try{
+      let bid;
+      if(preferProxy) bid=readBid(await loadJson(proxy,75000));
+      else{
+        try{bid=readBid(await loadJson(direct,10000));}
+        catch(error){preferProxy=true;bid=readBid(await loadJson(proxy,75000));}
+      }
       rate.text=bid.toLocaleString('ru-RU',{minimumFractionDigits:2,maximumFractionDigits:2})+' ₽ / USDT';
       rate.note='Продажа USDT · обновлено '+new Date().toLocaleTimeString('ru-RU',{hour:'2-digit',minute:'2-digit'});
-    }catch(e){
+    }catch(error){
       rate.text='Курс недоступен';rate.note='Не удалось получить данные Rapira';
-      console.warn('Ice Pay: Rapira quote unavailable',e);
-    }
-    paint();
+      console.warn('Ice Pay: Rapira quote unavailable',error);
+    }finally{loading=false;paint();}
   }
   const page=document.querySelector('#page');
   if(page)new MutationObserver(paint).observe(page,{childList:true});
