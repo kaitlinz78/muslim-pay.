@@ -177,6 +177,18 @@ a:focus-visible,button:focus-visible,input:focus-visible,select:focus-visible{ou
 .ice-pop-close{position:absolute;top:9px;right:11px;border:0;background:transparent;color:var(--ui-muted);font-size:23px;padding:1px 9px}
 @media(max-width:600px){.top-actions .user-button{display:none!important}.top-actions{padding:6px!important;gap:5px!important}.top-actions button{height:39px!important;padding:0 9px!important;font-size:12px!important}.ice-theme-button .ice-theme-word{display:none}.topbar{min-height:68px!important}.menu-button{min-width:65px}.page{padding-top:18px!important}}
 </style>
+<style id="ice-trader-login-style">
+/* Trader login: do not display dashboard before validated session */
+html:not(.ice-auth-ok) #shell{display:none!important}
+.ice-auth-overlay{position:fixed;inset:0;z-index:9999;display:flex;align-items:center;justify-content:center;padding:18px;background:radial-gradient(ellipse at 20% 0,#e2f2ff,#f3f8ff 72%);font-family:Manrope,system-ui,sans-serif;color:#204269}
+.ice-auth-card{width:min(100%,410px);border:1px solid #fff;border-radius:24px;background:linear-gradient(145deg,#fff,#eef6ff);padding:29px;box-shadow:0 18px 55px #3167ac18}
+.ice-auth-logo{color:#2563eb;font-size:28px;font-weight:850;letter-spacing:.07em}.ice-auth-logo span{color:#153f80}
+.ice-auth-card h1{font-size:24px;line-height:1.3;color:#1b4f92;margin:19px 0 7px}.ice-auth-card p{font-size:12px;color:#7c91af;line-height:1.75;margin:0 0 20px}
+.ice-auth-card label{display:block;font-size:12px;color:#5b7c9f;font-weight:800;margin-top:13px}
+.ice-auth-card input{width:100%;padding:13px 15px;min-height:46px;border-radius:12px;background:#fff;border:1px solid #d2e3f7;color:#20466f;margin-top:7px;outline-color:#80b4f4}
+.ice-auth-card button[type=submit]{width:100%;border-radius:14px;background:linear-gradient(135deg,#347aeb,#245dcc);color:#fff;border:0;min-height:46px;padding:12px;margin-top:21px;font-weight:850}
+.ice-auth-card button:disabled{opacity:.55}.ice-auth-error{min-height:20px;color:#c34d62;font-size:12px;line-height:1.6;margin-top:12px}.ice-auth-footer{font-size:11px;color:#899cb3;border-top:1px solid #e3ecf8;margin-top:16px;padding-top:15px;line-height:1.6}
+</style>
 </head>
 <body>
   <div class="shell" id="shell">
@@ -215,9 +227,9 @@ function icon(n){return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24
 const nav=[{group:'',items:[['home','Главная','home']]},{group:'ОПЕРАЦИИ',items:[['payin','Pay-In','cube'],['payout','Pay-Out','wallet'],['payout-requests','Запросы Pay-Out','file'],['manual','Ручная выдача','card'],['qr','QR','qr'],['traffic','Свободный трафик','chart'],['appeals','Апелляции','message']]},{group:'КАБИНЕТ',items:[['requisites','Реквизиты','card'],['wallet','Кошелёк','wallet'],['automation','Автоматизация','robot'],['settings','Настройки','gear'],['notifications','Уведомления','bell']]}];
 const titles=Object.fromEntries(nav.flatMap(g=>g.items.map(i=>[i[0],i[1]])));
 const initial=()=>({working:false,balance:.66,reserved:0,insurance:0,rate:null,records:[{id:'D-001',name:'Тестовая карта',type:'🌐 Международная карта',detail:'•••• 4582',holder:'Тестовый получатель',status:'active'},{id:'D-002',name:'Карта резервная',type:'🌐 Международная карта',detail:'•••• 7238',holder:'Демо получатель',status:'archived'}],orders:[{id:'MP-1042',kind:'Pay-In',amount:15000,currency:'RUB',status:'success',created:'2026-10-29T12:40:00'},{id:'MP-1041',kind:'Pay-Out',amount:7800,currency:'RUB',status:'pending',created:'2026-10-29T12:26:00'},{id:'MP-1040',kind:'Pay-In',amount:20000,currency:'RUB',status:'expired',created:'2026-10-28T15:17:00'}],walletOps:[],appeals:[],notifications:[{id:'n-1',title:'Добро пожаловать в Ice Pay',detail:'Это тестовый интерфейс. Все действия выполняются локально в браузере.',time:'Демо',read:false}],autoPayin:false,autoPayout:false,onlyActive:true});
-function load(){try{const s=JSON.parse(localStorage.getItem('muslim-pay-demo-v2'));if(s&&typeof s==='object'&&Array.isArray(s.records)&&Array.isArray(s.orders))return {...initial(),...s}}catch(e){}return initial()}
+function load(){try{const s=JSON.parse(localStorage.getItem('ice-pay-demo-'+(sessionStorage.getItem('ice-pay-trader-id')||'guest')));if(s&&typeof s==='object'&&Array.isArray(s.records)&&Array.isArray(s.orders))return {...initial(),...s}}catch(e){}return initial()}
 let state=load();for(const o of state.orders||[]){if(o.currency==='KZT')o.currency='RUB'}for(const item of state.notifications||[]){if(typeof item.title==='string')item.title=item.title.replace(/Muslim Pay|ВОВА КОЛОКОЛЬЦЕВ/g,'Ice Pay')}let currentPage='home',tabs={requisites:'active',payin:'all',payout:'all',appeals:'all'},searches={},selects={},dateRange='30',fromDate='2026-10-01',toDate='2026-10-30';
-const save=()=>{try{localStorage.setItem('muslim-pay-demo-v2',JSON.stringify(state))}catch(e){}};
+const save=()=>{try{localStorage.setItem('ice-pay-demo-'+(sessionStorage.getItem('ice-pay-trader-id')||'guest'),JSON.stringify(state))}catch(e){}};
 const elem=(tag,className,text)=>{let el=document.createElement(tag);el.className=className;el.textContent=text;return el};
 function toast(msg){const root=$('#toast-root');root.innerHTML='';root.appendChild(elem('div','toast',msg));setTimeout(()=>root.replaceChildren(),3400)}
 function sidebar(){const navEl=$('#sidebar-nav');navEl.innerHTML=nav.map(group=>(group.group?`<div class="nav-heading">${group.group}</div>`:'')+group.items.map(([id,label,ico])=>`<a href="#/${id}" class="nav-link ${currentPage===id?'active':''}" data-nav="${id}">${icon(ico)}<span>${label}</span></a>`).join('')).join('');$('#sidebar-balance').textContent=money(state.balance-state.reserved);$('#sidebar-work-switch').checked=state.working}
@@ -512,6 +524,67 @@ document.addEventListener('keydown',e=>{if(e.key==='Escape')close()});
 window.addEventListener('resize',()=>{if(active)locate(active==='language'?languagePanel:themePanel,active==='language'?languageButton:themeButton)});
 new MutationObserver(schedule).observe(document.body,{childList:true,subtree:true,characterData:true,attributes:true,attributeFilter:['placeholder','aria-label','title','data-label']});
 applyPalette();paintPopups();schedule();
+})();
+</script>
+<script id="ice-trader-login">
+(()=>{
+'use strict';
+const API='https://ice-pay-auth.onrender.com';
+const TOKEN='ice-pay-trader-token';
+const get=id=>document.getElementById(id);
+const esc=t=>String(t||'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const overlay=document.createElement('div');overlay.className='ice-auth-overlay';overlay.id='ice-auth-overlay';
+overlay.innerHTML='<section class="ice-auth-card"><div class="ice-auth-logo">ICE <span>PAY</span></div><h1>Вход для трейдеров</h1><p>Войдите в кабинет под индивидуальным логином и паролем, выданными администратором Ice Pay.</p><form id="ice-trader-login-form"><label for="ice-login">Логин</label><input id="ice-login" name="username" autocomplete="username" autocapitalize="off" required minlength="4" maxlength="32"><label for="ice-password">Пароль</label><input id="ice-password" type="password" name="password" autocomplete="current-password" required><button type="submit">Войти в Ice Pay</button><div class="ice-auth-error" id="ice-auth-error" role="alert"></div></form><div class="ice-auth-footer">Логин создаётся владельцем в отдельной админке. Балансы и операции в текущей версии являются демонстрационными.</div></section>';
+document.body.append(overlay);
+const error=message=>{get('ice-auth-error').textContent=String(message||'Ошибка авторизации')};
+async function api(path,opts={}){
+ const ctl=new AbortController(),timer=setTimeout(()=>ctl.abort(),16000);
+ try{
+  const res=await fetch(API+path,{...opts,headers:{'Content-Type':'application/json',...(opts.headers||{})},cache:'no-store',signal:ctl.signal});
+  let data;try{data=await res.json()}catch{data={}}
+  if(!res.ok)throw Error(data.error||'Сервер входа недоступен');
+  return data;
+ }finally{clearTimeout(timer)}
+}
+function show(account){
+ sessionStorage.setItem('ice-pay-trader-id',account.id);
+ sessionStorage.setItem('ice-pay-trader-username',account.username);
+ if(get('user-button'))get('user-button').textContent=account.username;
+ document.documentElement.classList.add('ice-auth-ok');
+ overlay.remove();
+}
+async function verifyExisting(){
+ const token=sessionStorage.getItem(TOKEN);
+ if(!token)return;
+ try{
+  const data=await api('/v1/auth/me',{headers:{Authorization:'Bearer '+token}});
+  if(data.account?.role!=='trader')throw Error('Только трейдерам доступен этот кабинет');
+  show(data.account);
+ }catch(e){
+  sessionStorage.removeItem(TOKEN);sessionStorage.removeItem('ice-pay-trader-id');
+  error('Сессия завершена. Войдите снова.');
+ }
+}
+get('ice-trader-login-form').addEventListener('submit',async e=>{
+ e.preventDefault();
+ const btn=e.target.querySelector('button[type=submit]');btn.disabled=true;error('');
+ try{
+  const d=new FormData(e.target);
+  const data=await api('/v1/auth/login',{method:'POST',body:JSON.stringify({username:String(d.get('username')).trim().toLowerCase(),password:d.get('password'),role:'trader'})});
+  if(data.account?.role!=='trader'||!data.token)throw Error('Нет доступа к кабинету трейдера');
+  sessionStorage.setItem(TOKEN,data.token);
+  sessionStorage.setItem('ice-pay-trader-id',data.account.id);
+  location.reload(); // loads isolated demo data for this account
+ }catch(ex){error(ex.message==='Failed to fetch'?'Сервер авторизации недоступен':ex.message);btn.disabled=false;}
+});
+get('exit-button')?.addEventListener('click',e=>{
+ e.preventDefault();e.stopImmediatePropagation();
+ const token=sessionStorage.getItem(TOKEN);
+ sessionStorage.removeItem(TOKEN);sessionStorage.removeItem('ice-pay-trader-id');sessionStorage.removeItem('ice-pay-trader-username');
+ if(token)fetch(API+'/v1/auth/logout',{method:'POST',headers:{Authorization:'Bearer '+token}}).catch(()=>{});
+ location.reload();
+},true);
+verifyExisting();
 })();
 </script>
 </body>
