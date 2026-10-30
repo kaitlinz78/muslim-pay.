@@ -106,6 +106,31 @@ async function initialize() {
   const timer=setInterval(()=>ensureOwner().catch(e=>console.error('Owner check:',e.message)),60000);
   timer.unref();
   console.log('Ice Pay authorization API listening on Redis (VOLATILE, DEMO ONLY)');
+  try {
+    // Verify the actual login, bearer-token, and logout HTTP routes once on startup.
+    // No passwords or tokens are logged.
+    const controller=new AbortController();
+    const timer=setTimeout(()=>controller.abort(),8000);
+    try {
+      const origin='https://ice-pay-owner.onrender.com';
+      const base='http://127.0.0.1:'+PORT;
+      const login=await fetch(base+'/v1/auth/login',{
+        method:'POST',headers:{'Origin':origin,'Content-Type':'application/json'},
+        body:JSON.stringify({username:OWNER_USERNAME,password:process.env.OWNER_INITIAL_PASSWORD,role:'owner'}),
+        signal:controller.signal
+      });
+      const session=await login.json();
+      if(!login.ok||!session.token||session.account?.role!=='owner')throw new Error('Login endpoint rejected Owner: '+login.status);
+      const me=await fetch(base+'/v1/auth/me',{headers:{'Origin':origin,'Authorization':'Bearer '+session.token},signal:controller.signal});
+      const current=await me.json();
+      if(!me.ok||current.account?.id!==session.account.id)throw new Error('Token validation failed');
+      const logout=await fetch(base+'/v1/auth/logout',{method:'POST',headers:{'Origin':origin,'Authorization':'Bearer '+session.token},signal:controller.signal});
+      if(!logout.ok)throw new Error('Logout endpoint failed');
+      console.log('OWNER AUTH HTTP SELF-TEST PASSED: login, bearer token, logout');
+    }finally{clearTimeout(timer)}
+  }catch(err){
+    console.error('Owner auth smoke test failed:',err.message);
+  }
 }
 async function parseBody(req) {
   const chunks=[];let length=0;
