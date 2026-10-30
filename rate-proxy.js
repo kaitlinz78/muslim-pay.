@@ -84,4 +84,4 @@ http.createServer(async (req, res) => {
     res.setHeader('Retry-After', '20');
     return json(res, 503, { error: 'Rapira temporarily unavailable' });
   }
-}).listen(PORT, '0.0.0.0', () => { console.log('Ice Pay rates service listening on ' + PORT); requestRate().then(r => console.log('Rapira USDT/RUB bid fetched successfully:', r.bidPrice)).catch(e => console.error('Rapira startup check failed:', e.message)); });
+}).listen(PORT, '0.0.0.0', () => { console.log('Ice Pay rates service listening on ' + PORT); requestRate().then(r => console.log('Rapira USDT/RUB bid fetched successfully:', r.bidPrice)).catch(e => console.error('Rapira startup check failed:', e.message)); verifyTx('0'.repeat(64),'').then(r=>console.log('TRON receipt API readiness:',r.status)).catch(e=>console.error('TRON receipt API readiness failed:',e.message)); });
