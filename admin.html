@@ -1,0 +1,166 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#f3f8ff">
+<title>Ice Pay Owner — Пользователи и TON Memo</title>
+<meta name="description" content="Отдельная демонстрационная админ-панель Ice Pay для управления TON Memo">
+<meta name="robots" content="noindex,nofollow,noarchive">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+:root{color-scheme:light;--bg:#f3f8ff;--side:#eaf3ff;--text:#16375c;--muted:#7892b0;--blue:#2563eb;--line:#dbe8f8;--shadow:0 12px 36px #3469ad11}
+*{box-sizing:border-box}body{font:500 14px/1.5 Manrope,system-ui,-apple-system,sans-serif;margin:0;background:radial-gradient(ellipse at 80% 0,#d6eaffaa,transparent 50%),var(--bg);color:var(--text)}
+button,input{font:inherit}button{cursor:pointer}button:disabled{cursor:not-allowed;opacity:.6}
+a{color:#2563eb;text-decoration:none}a:hover{text-decoration:underline}
+.shell{min-height:100vh;display:grid;grid-template-columns:253px minmax(0,1fr)}
+aside{background:linear-gradient(155deg,#e8f3ff,#f5f9ff 66%,#e3efff);border-right:1px solid #d3e3f7;padding:30px 16px;display:flex;flex-direction:column;gap:24px}
+.logo{display:flex;gap:10px;align-items:center;padding:0 10px}.mark{height:38px;width:38px;border-radius:13px;background:linear-gradient(135deg,#49acff,#2563eb);display:grid;place-items:center;color:#fff;font-weight:800;font-size:18px;box-shadow:0 8px 15px #2563eb29}
+.brand{font-weight:800;letter-spacing:.05em;font-size:20px;color:#1c58a2;line-height:1.1}.brand small{display:block;letter-spacing:.13em;font-size:9px;color:#668ebc;margin-top:6px}
+.side-title{font-size:10px;letter-spacing:.14em;color:#8ca4be;font-weight:800;margin:12px 10px 2px}
+.nav{display:flex;align-items:center;gap:11px;background:#fff;border:1px solid #d5e5fa;border-radius:14px;padding:13px;color:#235eaf;font-weight:800;box-shadow:0 5px 16px #3b7dbe10}
+.nav svg{width:21px;height:21px}.side-foot{margin-top:auto;border-radius:16px;background:#ffffffb8;border:1px solid #dbe7f9;padding:15px;font-size:11px;color:#7891ad;line-height:1.65}
+.side-foot strong{display:block;color:#305e97;font-size:12px;margin-bottom:4px}
+main{min-width:0}.topbar{height:79px;background:#ffffffc9;border-bottom:1px solid #e0ecf9;backdrop-filter:blur(14px);display:flex;align-items:center;justify-content:space-between;padding:0 30px;gap:12px}
+.top-title{font-weight:800;color:#426387}.role{font-size:11px;color:#2c64b5;background:#e9f3ff;border:1px solid #d1e5fd;border-radius:20px;padding:9px 12px;font-weight:800}
+.page{max-width:1310px;padding:32px 30px 65px;margin:auto}
+h1{font-size:clamp(29px,3vw,40px);letter-spacing:-.055em;color:#195098;margin:0 0 6px;font-weight:800}h2{font-size:17px;font-weight:800;margin:0;color:#204a78}
+.subtitle{color:var(--muted);margin:0 0 23px}.rule{width:89px;height:4px;border-radius:9px;background:linear-gradient(90deg,#2563eb,#afd8ff);margin:10px 0 26px}
+.alert{background:#fff8e9;border:1px solid #f0dfb5;border-radius:15px;padding:15px 17px;line-height:1.7;color:#83652f;font-size:12px;margin-bottom:22px}
+.alert strong{display:block;color:#77520c;font-size:13px}
+.metrics{display:grid;grid-template-columns:repeat(3,1fr);gap:13px;margin-bottom:21px}
+.metric{background:linear-gradient(135deg,#fff,#edf6ff);border:1px solid #fff;border-radius:18px;padding:20px 22px;box-shadow:var(--shadow)}.metric small{color:#839ab3;font-size:11px;font-weight:700}.metric strong{display:block;color:#1c5da8;margin-top:10px;font-size:26px;line-height:1.2;font-weight:800}
+.card{background:linear-gradient(145deg,#fff,#f2f8ff);border:1px solid #fff;border-radius:18px;padding:24px;margin-bottom:18px;box-shadow:var(--shadow)}
+.card-head{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:14px;margin-bottom:16px}
+.actions{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:7px;background:#fff;color:#2863ad;border:1px solid #d3e3f7;border-radius:14px;padding:11px 15px;min-height:42px;font-size:12px;font-weight:800}
+.btn:hover{background:#eaf4ff;border-color:#b4d1fa}.btn.primary{background:linear-gradient(140deg,#3178ef,#215bd4);border:1px solid #2563eb;color:#fff;box-shadow:0 7px 16px #2563eb24}.btn.primary:hover{background:#205bd4}
+.search{border:1px solid #d4e2f5;background:#fff;border-radius:13px;padding:13px 14px;min-width:240px;color:var(--text);outline-color:#78b0ff}
+.description{font-size:12px;color:#7e93ac;line-height:1.75;margin:3px 0 18px}
+.tablewrap{overflow-x:auto;border:1px solid #dbe8f8;border-radius:15px;background:#fff}
+table{width:100%;border-collapse:collapse;text-align:left;font-size:12px}
+th{font-size:11px;color:#6887af;font-weight:800;background:#edf5ff;padding:14px 16px;border-bottom:1px solid #e0eaf8}
+td{padding:16px;border-bottom:1px solid #e8f0f9;color:#3d5c81}tr:last-child td{border-bottom:0}tbody tr:hover{background:#f7fbff}
+.name{font-weight:800;color:#254872}.user-id{display:block;font-size:10px;color:#9bacbf;margin-top:3px}.code{font:800 12px ui-monospace,SFMono-Regular,Consolas,monospace;letter-spacing:.01em;color:#255dad;background:#e9f4ff;border:1px solid #d0e5ff;border-radius:9px;padding:7px 9px;word-break:break-word;display:inline-block}
+.tools{display:flex;gap:7px;align-items:center;flex-wrap:wrap}.muted{font-size:12px;color:#8398b3}
+.rules{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}
+.rule-card{background:#f8fbff;border:1px solid #e0ebf9;border-radius:14px;padding:15px}.rule-card strong{color:#2b619d;font-size:12px}.rule-card p{margin:6px 0 0;color:#8297ae;font-size:11px;line-height:1.65}
+.history{border-top:1px solid #e1eafa;margin-top:18px;padding-top:15px}.history h3{font-size:13px;margin:0 0 8px;color:#42678d}.history-row{display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;padding:9px;border-radius:8px;font-size:11px;color:#728ba8}.history-row:nth-child(odd){background:#f4f9ff}.history-row strong{color:#325b93}
+.overlay{position:fixed;inset:0;background:#17375e80;backdrop-filter:blur(9px);display:flex;align-items:center;justify-content:center;padding:15px;z-index:10}
+.dialog{width:min(100%,490px);max-height:90dvh;overflow-y:auto;background:linear-gradient(140deg,#fff,#eef7ff);border-radius:23px;padding:26px;box-shadow:0 30px 85px #13396048}
+.dialog-top{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:18px}.x{width:38px;height:38px;border-radius:12px;border:1px solid #d8e6f9;color:#326baf;background:#fff;font-size:23px}
+.form-group{display:grid;gap:7px;margin:14px 0;font-weight:800;color:#607f9f;font-size:12px}.form-group input{border:1px solid #ccddf2;background:#fff;border-radius:12px;min-height:43px;padding:11px 12px;color:#25476b;font-weight:600}
+.input-actions{display:flex;justify-content:flex-end}.form-actions{display:flex;justify-content:flex-end;gap:9px;margin-top:19px}.validation{color:#ba5265;font-size:12px;min-height:17px}.history-details{font-size:12px;color:#7891ab;margin-top:19px;border-top:1px solid #deebf9;padding-top:12px}.history-details summary{cursor:pointer;font-weight:750}.history-details code{word-break:break-all}
+.empty{text-align:center;padding:25px;color:#93a5ba}
+@media(max-width:1020px){.shell{grid-template-columns:200px minmax(0,1fr)}.page{padding:24px 18px 50px}.topbar{padding:0 18px}.card{padding:19px}}
+@media(max-width:760px){.shell{display:block}aside{flex-direction:row;align-items:center;justify-content:space-between;gap:8px;padding:12px 14px;border-right:0;border-bottom:1px solid #d3e3f7}.brand{font-size:16px}.brand small{font-size:8px}.side-title,.side-foot{display:none}.nav{font-size:11px;padding:10px}.topbar{height:60px;padding:0 15px}.top-title{font-size:12px}.page{padding:20px 13px 48px}.card{padding:17px 13px}.metrics{gap:9px}.metric{padding:13px;border-radius:15px}.metric strong{font-size:20px}.metric small{font-size:10px}.search{width:100%;min-width:0}.actions{width:100%}.actions .btn{flex:1}thead{display:none}.tablewrap{border:0;background:none;overflow:visible}table,tbody,tr,td{display:block;width:100%}tbody{display:grid;gap:10px}tr{background:#fff;border:1px solid #deebfa;border-radius:14px;padding:9px 12px;box-shadow:0 4px 10px #286fba0a}td{border:0;border-bottom:1px solid #edf2fa!important;padding:9px 0;display:flex;align-items:center;justify-content:space-between;gap:10px;text-align:right;min-height:35px}td:before{content:attr(data-label);text-align:left;color:#8098b4;font-size:10px;font-weight:800;min-width:30%}td:last-child{border:0!important}.rules{grid-template-columns:1fr}.history-row{grid-template-columns:1fr;gap:4px}}
+@media(prefers-reduced-motion:reduce){*,*:before,*:after{transition:none!important}}
+</style>
+</head>
+<body>
+<div class="shell">
+<aside>
+<div class="logo"><span class="mark">I</span><div class="brand">ICE PAY<small>OWNER · ADMIN</small></div></div>
+<div><div class="side-title">УПРАВЛЕНИЕ</div><div class="nav"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="3"/><circle cx="9" cy="9" r="2"/><path d="M7 16h10m-3-9h4"/></svg><span>Пользователи и Memo</span></div></div>
+<div class="side-foot"><strong>Отдельная админ-площадка</strong>Эта страница не встроена в сайт трейдеров. Сейчас все данные тестовые и хранятся в браузере.</div>
+</aside>
+<main>
+<header class="topbar"><div class="top-title">Ice Pay / Управление TON Memo</div><span class="role">DEMO · НЕЗАЩИЩЁННЫЙ ПРОТОТИП</span></header>
+<div class="page">
+<h1>Пользователи и Memo</h1><p class="subtitle">Настройка идентификаторов для будущих пополнений TON</p><div class="rule"></div>
+<div class="alert"><strong>Демонстрационная админка — не для реальных платежей</strong>Пока нет серверного входа Owner и общей базы клиентов. Memo здесь сохраняются только в этом браузере; изменение не влияет на реальные счета и не включает автозачисление TON. Не используйте эти Memo для переводов.</div>
+<div class="metrics"><div class="metric"><small>Тестовые клиенты</small><strong id="metric-users">0</strong></div><div class="metric"><small>Активные Memo</small><strong id="metric-memo">0</strong></div><div class="metric"><small>Изменений Memo</small><strong id="metric-changes">0</strong></div></div>
+<section class="card"><div class="card-head"><h2>Управление Memo</h2><div class="actions"><input class="search" id="search" placeholder="Поиск по клиенту или Memo" aria-label="Поиск по клиентам"><button class="btn primary" id="add-user">+ Добавить клиента</button></div></div>
+<p class="description">Для каждого тестового клиента автоматически генерируется уникальный Memo. Нажмите «Изменить», чтобы назначить свой. Старые значения остаются зарезервированными и сохраняются в истории.</p>
+<div class="tablewrap"><table><thead><tr><th>Клиент</th><th>Memo TON</th><th>Создан</th><th>Действия</th></tr></thead><tbody id="users-body"></tbody></table></div>
+</section>
+<section class="card"><h2>Правила Memo</h2><div class="rules" style="margin-top:14px"><div class="rule-card"><strong>Уникальность</strong><p>Каждому клиенту присваивается собственный идентификатор без повторений.</p></div><div class="rule-card"><strong>Редактирование</strong><p>После замены старый Memo сохраняется в истории и не назначается другому клиенту.</p></div><div class="rule-card"><strong>Автозачисление</strong><p>Для запуска потребуется серверная авторизация, постоянная база и проверка платежей TON.</p></div></div></section>
+<section class="card"><div class="card-head"><h2>История изменений</h2><button class="btn" id="export" type="button">Экспорт CSV</button></div><div class="muted" id="history"></div></section>
+</div></main></div><div id="dialog-root"></div>
+<script>
+(()=>{
+'use strict';
+const KEY='ice-pay-owner-memo-demo-v1';
+const ABC='23456789ABCDEFGHJKLMNPQRSTUVWXYZ';
+const el=id=>document.getElementById(id);
+const escape=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+function seed(){
+  const state={users:[],history:[]};
+  for(let n=1;n<=3;n++)state.users.push({id:'DEMO-'+String(n).padStart(4,'0'),name:'Тестовый клиент '+n,memo:unique(state),past:[],createdAt:new Date().toISOString()});
+  return state;
+}
+function load(){try{const s=JSON.parse(localStorage.getItem(KEY));if(s&&Array.isArray(s.users)&&Array.isArray(s.history))return s}catch{}return seed()}
+let state=load();
+function save(){try{localStorage.setItem(KEY,JSON.stringify(state))}catch(e){alert('Не удалось сохранить демонстрационные данные в браузере')}}
+function taken(v,exclude=''){
+ const k=v.toUpperCase();
+ return state.users.some(u=>(u.id!==exclude&&u.memo.toUpperCase()===k)||(u.past||[]).some(x=>x.memo.toUpperCase()===k));
+}
+function unique(obj=state){
+ const used=new Set(obj.users.flatMap(u=>[u.memo,...(u.past||[]).map(x=>x.memo)].map(x=>x.toUpperCase())));
+ const source=globalThis.crypto;
+ if(!source?.getRandomValues)throw Error('Генератор случайных чисел недоступен');
+ for(let retry=0;retry<64;retry++){
+  const bytes=new Uint8Array(12);source.getRandomValues(bytes);
+  const memo='ICE-'+Array.from(bytes,n=>ABC[n%ABC.length]).join('');
+  if(!used.has(memo.toUpperCase()))return memo;
+ }
+ throw Error('Не удалось создать Memo');
+}
+function fmt(d){const t=new Date(d);return isNaN(t)?'—':t.toLocaleString('ru-RU',{day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit'})}
+function render(){
+ const query=el('search').value.trim().toLowerCase();
+ const matches=state.users.filter(u=>(u.name+' '+u.id+' '+u.memo).toLowerCase().includes(query));
+ el('metric-users').textContent=state.users.length;el('metric-memo').textContent=state.users.filter(x=>!!x.memo).length;el('metric-changes').textContent=state.history.length;
+ el('users-body').innerHTML=matches.map(u=>'<tr><td data-label="Клиент"><div><span class="name">'+escape(u.name)+'</span><span class="user-id">'+escape(u.id)+'</span></div></td><td data-label="Memo"><code class="code">'+escape(u.memo)+'</code></td><td data-label="Создан">'+fmt(u.createdAt)+'</td><td data-label="Действия"><div class="tools"><button class="btn" data-edit="'+escape(u.id)+'">Изменить Memo</button><button class="btn" data-copy="'+escape(u.id)+'">Копировать</button></div></td></tr>').join('')||'<tr><td class="empty" colspan="4">Нет клиентов по заданному поиску</td></tr>';
+ el('history').innerHTML=state.history.length?'<div class="history">'+state.history.slice(0,25).map(h=>'<div class="history-row"><span><strong>'+escape(h.name)+'</strong> · '+fmt(h.at)+'</span><span>'+escape(h.oldMemo)+' → '+escape(h.newMemo)+'</span><span>'+escape(h.reason||'Без комментария')+'</span></div>').join('')+'</div>':'Изменений пока нет';
+}
+function close(){el('dialog-root').replaceChildren()}
+function edit(id){
+ const u=state.users.find(u=>u.id===id);if(!u)return;
+ const old=(u.past||[]).slice().reverse().map(p=>'<p><code>'+escape(p.memo)+'</code> · '+fmt(p.at)+'</p>').join('');
+ el('dialog-root').innerHTML='<div class="overlay" data-close><section class="dialog" role="dialog" aria-modal="true" aria-label="Изменить Memo"><div class="dialog-top"><h2>Изменить TON Memo</h2><button type="button" class="x" data-close-btn aria-label="Закрыть">×</button></div><div class="muted">'+escape(u.name)+' · '+escape(u.id)+'</div><form id="memo-form"><label class="form-group">Новый Memo<input id="new-memo" name="memo" value="'+escape(u.memo)+'" minlength="6" maxlength="40" required spellcheck="false" autocomplete="off"></label><div class="input-actions"><button type="button" class="btn" id="generate-memo">Сгенерировать</button></div><label class="form-group">Причина изменения<input name="reason" maxlength="120" placeholder="Например, индивидуальные условия"></label><div id="validation" class="validation" role="alert"></div><div class="form-actions"><button type="button" class="btn" data-close-btn>Отмена</button><button type="submit" class="btn primary">Сохранить Memo</button></div></form>'+(old?'<details class="history-details"><summary>Старые Memo ('+u.past.length+')</summary>'+old+'</details>':'')+'</section></div>';
+ el('generate-memo').onclick=()=>{el('new-memo').value=unique();el('new-memo').focus()};
+ el('memo-form').onsubmit=e=>{
+  e.preventDefault();
+  const data=new FormData(e.target);const next=String(data.get('memo')||'').trim();
+  if(!/^[A-Za-z0-9][A-Za-z0-9_-]{5,39}$/.test(next)){el('validation').textContent='От 6 до 40 символов: латиница, цифры, - и _';return}
+  if(next.toUpperCase()===u.memo.toUpperCase()){el('validation').textContent='Этот Memo уже назначен';return}
+  if(taken(next,u.id)){el('validation').textContent='Memo используется или уже был назначен. Выберите другой';return}
+  const at=new Date().toISOString();const oldMemo=u.memo;
+  u.past ||= [];u.past.push({memo:oldMemo,at});u.memo=next;
+  const reason=String(data.get('reason')||'').trim();state.history.unshift({id:u.id,name:u.name,oldMemo,newMemo:next,at,reason});
+  save();close();render();
+ };
+}
+el('add-user').onclick=()=>{
+ let name=prompt('Название тестового клиента (это не настоящий аккаунт):','Новый клиент');
+ if(name===null)return;
+ name=name.trim();
+ if(!name||name.length>64){alert('Укажите имя до 64 символов');return}
+ const id='DEMO-'+Date.now().toString(36).toUpperCase()+'-'+Math.floor(Math.random()*10000).toString().padStart(4,'0');
+ state.users.unshift({id,name,memo:unique(),past:[],createdAt:new Date().toISOString()});save();render();
+};
+el('users-body').onclick=async e=>{
+ const editButton=e.target.closest('[data-edit]');if(editButton){edit(editButton.dataset.edit);return}
+ const copy=e.target.closest('[data-copy]');if(copy){
+  const u=state.users.find(u=>u.id===copy.dataset.copy);if(!u)return;
+  try{await navigator.clipboard.writeText(u.memo);copy.textContent='Скопировано'}catch{alert('Memo: '+u.memo)}
+ }
+};
+el('dialog-root').onclick=e=>{if(e.target.hasAttribute('data-close')||e.target.closest('[data-close-btn]'))close()};
+document.addEventListener('keydown',e=>{if(e.key==='Escape')close()});
+el('search').oninput=render;
+el('export').onclick=()=>{
+ const rows=[['Клиент','ID','Текущий Memo','Архивные Memo'],...state.users.map(u=>[u.name,u.id,u.memo,(u.past||[]).map(x=>x.memo).join(' | ')])];
+ const csv='\ufeff'+rows.map(row=>row.map(v=>'"'+String(v).replace(/"/g,'""')+'"').join(';')).join('\r\n');
+ const blob=new Blob([csv],{type:'text/csv;charset=utf-8'}),url=URL.createObjectURL(blob),a=document.createElement('a');
+ a.href=url;a.download='ice-pay-memo-demo.csv';a.click();setTimeout(()=>URL.revokeObjectURL(url),1000);
+};
+save();render();
+})();
+</script>
+</body>
+</html>
