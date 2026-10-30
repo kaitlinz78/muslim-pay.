@@ -189,6 +189,33 @@ html:not(.ice-auth-ok) #shell{display:none!important}
 .ice-auth-card button[type=submit]{width:100%;border-radius:14px;background:linear-gradient(135deg,#347aeb,#245dcc);color:#fff;border:0;min-height:46px;padding:12px;margin-top:21px;font-weight:850}
 .ice-auth-card button:disabled{opacity:.55}.ice-auth-error{min-height:20px;color:#c34d62;font-size:12px;line-height:1.6;margin-top:12px}.ice-auth-footer{font-size:11px;color:#899cb3;border-top:1px solid #e3ecf8;margin-top:16px;padding-top:15px;line-height:1.6}
 </style>
+<style id="ice-ton-deposit-theme">
+/* TON deposit receiving details for authenticated traders. No actual balance credit. */
+.ice-ton-wallet-btn{background:linear-gradient(130deg,#318bf4,#1870d9);border-color:#3e95ed}
+.ice-ton-wallet-btn:hover{background:linear-gradient(130deg,#45a0ff,#247ded)}
+.ice-ton-wallet-caption{font-size:11px;line-height:1.75;border-radius:14px;background:#eaf4ff;border:1px solid #cee5fb;color:#52789d;padding:13px 15px;margin:12px 0 19px}
+.ice-ton-wallet-caption strong{color:#2b63ad}
+.ice-ton-overlay{position:fixed;inset:0;z-index:110;display:flex;justify-content:center;align-items:center;background:#1e426b7f;backdrop-filter:blur(9px);padding:14px}
+.ice-ton-dialog{box-sizing:border-box;width:min(100%,515px);max-height:calc(100dvh - 28px);overflow-y:auto;background:linear-gradient(145deg,#fff,#edf6ff);color:#1d456f;border:1px solid #fff;border-radius:22px;box-shadow:0 30px 90px #15386266;padding:25px;font-family:Manrope,system-ui,sans-serif}
+.ice-ton-title-row{display:flex;justify-content:space-between;align-items:flex-start;gap:15px;margin-bottom:19px}
+.ice-ton-title-row h2{font-size:22px;margin:8px 0 0;font-weight:850;color:#1853a0}
+.ice-ton-chip{display:inline-flex;padding:5px 9px;border:1px solid #cee5ff;background:#e6f3ff;color:#2366b5;border-radius:30px;font-size:10px;font-weight:850}
+.ice-ton-close{display:grid;place-items:center;border-radius:12px;background:#fff;border:1px solid #d1e1f4;color:#35669f;min-width:37px;min-height:37px;font-size:24px;line-height:1}
+.ice-ton-alert{padding:14px;border:1px solid #f0d9a9;background:#fff7e5;color:#825b23;border-radius:14px;font-size:12px;line-height:1.7;margin-bottom:17px}
+.ice-ton-alert strong{display:block;font-weight:850;font-size:12px;margin-bottom:3px}
+.ice-ton-details{display:grid;gap:13px}.ice-ton-field{display:grid;gap:7px}
+.ice-ton-field label{font-size:11px;color:#718eae;font-weight:800}
+.ice-ton-value{background:#fff;border-radius:12px;border:1px solid #d4e6fb;color:#25548e;font-weight:800;padding:13px 14px;font-size:12px;overflow-wrap:anywhere;line-height:1.6;user-select:all}
+.ice-ton-value.mono{font-family:ui-monospace,SFMono-Regular,Consolas,monospace;font-weight:750;font-size:12px;letter-spacing:.01em}
+.ice-ton-btnrow{display:flex;flex-wrap:wrap;gap:8px}
+.ice-ton-copy{border-radius:12px;border:1px solid #c8e0fb;background:#e3f1ff;color:#235fa9;font-size:11px;font-weight:850;padding:10px 14px;min-height:40px}
+.ice-ton-copy:hover{background:#d9ebff}
+.ice-ton-notice{background:#fff;border:1px solid #deeafa;border-radius:13px;padding:14px;font-size:11px;color:#7891ae;line-height:1.7}
+.ice-ton-status{margin:11px 0 0;font-size:12px;color:#4b80b3;min-height:18px;line-height:1.6}
+.ice-ton-status.error{color:#b54f63}
+.ice-ton-loading{font-size:13px;color:#5e7eaa;line-height:1.8;text-align:center;padding:28px 10px}
+@media(max-width:800px){.ice-ton-dialog{padding:20px}.ice-ton-overlay{align-items:flex-end;padding:10px}.ice-ton-dialog{max-height:calc(100dvh - 20px);border-radius:22px 22px 15px 15px}.ice-ton-wallet-btn{flex:1 1 100%}.ice-ton-title-row h2{font-size:20px}}
+</style>
 </head>
 <body>
   <div class="shell" id="shell">
@@ -248,7 +275,7 @@ function tabBar(name,items){return `<div class="segmented" role="tablist">${item
 function orderList(which){let q=(searches[which]||'').toLowerCase(), status=tabs[which]||'all';let data=state.orders.filter(x=>which==='all'||x.kind===(which==='payin'?'Pay-In':'Pay-Out'));if(status!=='all')data=data.filter(x=>x.status===status);if(q)data=data.filter(x=>(x.id+' '+x.currency+' '+x.amount).toLowerCase().includes(q));return `<div class="table-wrap"><table class="data-table"><thead><tr><th>№ заявки</th><th>Тип</th><th>Сумма</th><th>Статус</th><th>Создано</th><th>Детали</th></tr></thead><tbody>${data.map(x=>`<tr><td>${esc(x.id)}</td><td>${esc(x.kind)}</td><td><strong>${money(x.amount,0)} ${esc(x.currency)}</strong></td><td>${statusTag(x.status)}</td><td>${dateFmt(x.created)}</td><td><button class="table-link" data-detail="order:${esc(x.id)}">Открыть</button></td></tr>`).join('')||`<tr><td colspan="6" style="text-align:center;color:var(--muted);padding:35px">Нет заявок по заданным фильтрам</td></tr>`}</tbody></table></div>`}
 function transactions(which){return `${title(which==='payin'?'Pay-In':'Pay-Out')}<div class="info-strip">Все операции здесь демонстрационные. Включение рабочего статуса и создание тестовых заявок не запускают настоящие переводы.</div><div class="action-row"><button class="gradient-button" data-action="new-${which}">${icon('plus')} Создать тестовую заявку</button><button class="secondary-button" data-export="${which}">${icon('download')} Экспорт CSV</button></div><div class="section-card"><div class="section-header"><h2>История ${which==='payin'?'Pay-In':'Pay-Out'}</h2><span class="volume-small">Всего: ${state.orders.filter(x=>x.kind===(which==='payin'?'Pay-In':'Pay-Out')).length}</span></div><div class="filters">${tabBar(which,[['all','Все'],['pending','Активные'],['success','Успешные'],['expired','Истекшие']])}<input type="search" data-search="${which}" value="${esc(searches[which]||'')}" placeholder="Поиск по номеру и сумме"></div>${orderList(which)}</div>`}
 function requisites(){const active=state.records.filter(r=>r.status==='active').length;let list=state.records.filter(r=>r.status===(tabs.requisites||'active'));let q=(searches.requisites||'').toLowerCase();if(q)list=list.filter(r=>(r.name+' '+r.type+' '+r.detail+' '+r.holder).toLowerCase().includes(q));if(selects.reqtype&&selects.reqtype!=='all')list=list.filter(r=>r.type===selects.reqtype);if(selects.reqstatus&&selects.reqstatus!=='all')list=list.filter(r=>r.status===selects.reqstatus);return `${title('Реквизиты')}<div class="action-row"><button class="gradient-button" data-action="add-requisite">Создать реквизиты</button></div><div class="mini-card-grid"><div class="mini-card"><strong>${state.records.length}</strong><span>Всего реквизитов</span></div><div class="mini-card"><strong>${active}</strong><span>Активных</span></div></div><div class="section-card"><div style="margin-bottom:15px">${tabBar('requisites',[['active','Активные'],['archived','Архив']])}</div><div class="filters"><input data-search="requisites" type="search" placeholder="Поиск по названию, реквизиту, ФИО, банку..." value="${esc(searches.requisites||'')}"><select data-select="reqtype"><option value="all">Все типы</option><option value="🌐 Международная карта" ${selects.reqtype==='🌐 Международная карта'?'selected':''}>Международная карта</option><option value="Банковская карта" ${selects.reqtype==='Банковская карта'?'selected':''}>Банковская карта</option><option value="СБП" ${selects.reqtype==='СБП'?'selected':''}>СБП</option></select><select data-select="reqstatus"><option value="all">Все статусы</option><option value="active" ${selects.reqstatus==='active'?'selected':''}>Активные</option><option value="archived" ${selects.reqstatus==='archived'?'selected':''}>Архивные</option></select></div><div class="table-wrap"><table class="data-table"><thead><tr><th>Название</th><th>Тип</th><th>Данные</th><th>Владелец</th><th>Статус</th><th>Действие</th></tr></thead><tbody>${list.map(r=>`<tr><td><strong>${esc(r.name)}</strong></td><td>${esc(r.type)}</td><td>${esc(r.detail)}</td><td>${esc(r.holder)}</td><td>${statusTag(r.status)}</td><td><button class="table-link" data-detail="req:${esc(r.id)}">Подробнее</button></td></tr>`).join('')||'<tr><td colspan="6" style="padding:35px;text-align:center;color:var(--muted)">Реквизиты не найдены</td></tr>'}</tbody></table></div></div>`}
-function wallet(){return `${title('Кошелёк')}<div class="wallet-actions"><button class="gradient-button" data-action="deposit">${icon('plus')} Пополнить баланс</button><button class="gradient-button" data-action="withdraw">Запросить вывод</button></div><div class="section-card"><div class="wallet-cards">${[['Основной баланс · TRC20',state.balance],['Доступно',state.balance-state.reserved],['Заблокировано',state.reserved],['Страховой депозит',state.insurance]].map(([label,num])=>`<div class="wallet-tile"><span class="asset-tag">USDT</span><div class="wallet-amount">${money(num)} USDT</div><div class="wallet-caption">${label}</div></div>`).join('')}<div class="wallet-tile"><div class="wallet-amount">${state.walletOps.filter(x=>x.kind==='deposit'&&x.status==='pending').length}</div><div class="wallet-caption">Пополнения в обработке</div></div><div class="wallet-tile"><div class="wallet-amount">${state.walletOps.filter(x=>x.kind==='withdraw'&&x.status==='pending').length}</div><div class="wallet-caption">Выводы в обработке</div></div></div></div><div class="section-card"><div class="section-header"><h2>История кошелька</h2><button class="secondary-button" data-export="wallet">${icon('download')} CSV</button></div>${walletTable()}</div>`}
+function wallet(){return `${title('Кошелёк')}<div class="wallet-actions"><button class="gradient-button" data-action="deposit">${icon('plus')} Пополнить USDT TRC20</button><button class="gradient-button ice-ton-wallet-btn" type="button" data-ice-ton="open">${icon('wallet')} Пополнить TON</button><button class="gradient-button" data-action="withdraw">Запросить вывод</button></div><div class="ice-ton-wallet-caption"><strong>TON-депозит:</strong> персональный Memo и адрес доступны после входа трейдера. Автоматическое зачисление пока не подключено, баланс ниже — демонстрационный USDT.</div><div class="section-card"><div class="wallet-cards">${[['Основной баланс · TRC20',state.balance],['Доступно',state.balance-state.reserved],['Заблокировано',state.reserved],['Страховой депозит',state.insurance]].map(([label,num])=>`<div class="wallet-tile"><span class="asset-tag">USDT</span><div class="wallet-amount">${money(num)} USDT</div><div class="wallet-caption">${label}</div></div>`).join('')}<div class="wallet-tile"><div class="wallet-amount">${state.walletOps.filter(x=>x.kind==='deposit'&&x.status==='pending').length}</div><div class="wallet-caption">Пополнения в обработке</div></div><div class="wallet-tile"><div class="wallet-amount">${state.walletOps.filter(x=>x.kind==='withdraw'&&x.status==='pending').length}</div><div class="wallet-caption">Выводы в обработке</div></div></div></div><div class="section-card"><div class="section-header"><h2>История кошелька</h2><button class="secondary-button" data-export="wallet">${icon('download')} CSV</button></div>${walletTable()}</div>`}
 function walletTable(){return `<div class="table-wrap"><table class="data-table"><thead><tr><th>Номер</th><th>Операция</th><th>Сумма</th><th>Создана</th><th>Статус</th></tr></thead><tbody>${state.walletOps.map(x=>`<tr><td>${esc(x.id)}</td><td>${x.kind==='deposit'?'Пополнение':'Запрос вывода'}</td><td>${money(x.amount)} USDT</td><td>${dateFmt(x.created)}</td><td>${statusTag(x.status)}</td></tr>`).join('')||'<tr><td colspan="5" style="text-align:center;padding:33px;color:var(--muted)">Операций пока нет</td></tr>'}</tbody></table></div>`}
 function payoutRequests(){return `${title('Запросы Pay-Out')}<div class="action-row"><button class="gradient-button" data-action="new-payout">${icon('plus')} Новый запрос</button></div><div class="section-card"><div class="section-header"><h2>Запросы на выплату</h2><span class="volume-small">Тестовая история</span></div><div class="filters"><input type="search" data-search="payout" placeholder="Найти заявку" value="${esc(searches.payout||'')}"></div>${orderList('payout')}</div>`}
 function manual(){return `${title('Ручная выдача')}<div class="two-column"><div class="section-card"><div class="section-header"><h2>Создать выдачу</h2></div><p class="section-caption">Тестовая заявка на ручную выдачу. Никакого реального перевода не произойдёт.</p><form id="manual-form"><label class="form-field">Сумма, RUB<input name="amount" type="number" min="1" step="1" required placeholder="Например, 5000"></label><label class="form-field">Способ<select name="method"><option>Банковская карта</option><option>СБП</option><option>Международная карта</option></select></label><label class="form-field">Комментарий<input name="comment" maxlength="100" placeholder="Назначение тестовой операции"></label><button class="gradient-button" type="submit">Создать тестовую выдачу</button></form></div><div class="section-card"><div class="section-header"><h2>Правила работы</h2></div><div class="info-list"><div class="info-row"><span>Рабочий статус</span>${workLabel()}</div><div class="info-row"><span>Доступный баланс</span><strong>${money(state.balance-state.reserved)} USDT</strong></div><div class="info-row"><span>Валюта</span><strong>RUB</strong></div><div class="info-row"><span>Курс Rapira (продажа USDT)</span><strong data-rapira-rate>Загрузка курса…</strong></div></div><p class="section-caption" style="margin-top:15px">Для подключения реальных выплат потребуются защищённая платёжная интеграция и отдельная проверка операций.</p></div></div>`}
@@ -585,6 +612,79 @@ get('exit-button')?.addEventListener('click',e=>{
  location.reload();
 },true);
 verifyExisting();
+})();
+</script>
+<script id="ice-ton-deposit-ui">
+(()=>{
+'use strict';
+const API='https://ice-pay-auth.onrender.com';
+const ROOT_ID='ice-ton-root';
+const ADDRESS_LENGTH=48;
+let address='',memo='';
+const escapeText=t=>String(t??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+function root(){
+ let el=document.getElementById(ROOT_ID);
+ if(!el){el=document.createElement('div');el.id=ROOT_ID;document.body.appendChild(el)}
+ return el;
+}
+function close(){
+ const el=document.getElementById(ROOT_ID);
+ if(el)el.replaceChildren();
+ if(!document.getElementById('ice-auth-overlay'))document.body.style.overflow='';
+}
+function shell(body){
+ root().innerHTML='<div class="ice-ton-overlay" data-ice-ton-overlay><section class="ice-ton-dialog" role="dialog" aria-modal="true" aria-label="TON депозит"><div class="ice-ton-title-row"><div><span class="ice-ton-chip">TON · Mainnet</span><h2>Пополнение TON</h2></div><button class="ice-ton-close" type="button" data-ice-ton-close aria-label="Закрыть">×</button></div>'+body+'</section></div>';
+ document.body.style.overflow='hidden';
+}
+const notice='<div class="ice-ton-alert" role="alert"><strong>Режим предварительной проверки</strong>Платежи на TON пока не отслеживаются и не зачисляются на баланс Ice Pay. Не отправляйте реальные деньги в расчёте на автоматическое пополнение.</div>';
+async function open(){
+ if(!document.documentElement.classList.contains('ice-auth-ok'))return;
+ const token=sessionStorage.getItem('ice-pay-trader-token');
+ if(!token){shell(notice+'<div class="ice-ton-status error">Необходимо войти в аккаунт трейдера.</div>');return;}
+ shell(notice+'<div class="ice-ton-loading">Загружаем ваши персональные реквизиты…</div>');
+ try{
+   const controller=new AbortController();
+   const timer=setTimeout(()=>controller.abort(),16000);
+   let response;
+   try{response=await fetch(API+'/v1/trader/ton-deposit',{headers:{Authorization:'Bearer '+token,Accept:'application/json'},cache:'no-store',signal:controller.signal})}
+   finally{clearTimeout(timer)}
+   const data=await response.json();
+   if(!response.ok)throw new Error(data.error||'Сервис недоступен');
+   if(data.asset!=='TON'||data.network!=='TON Mainnet'||data.status!=='preview_only'||data.autoCreditEnabled!==false)throw new Error('Неверный режим TON-депозита');
+   if(typeof data.address!=='string'||data.address.length!==ADDRESS_LENGTH||typeof data.memo!=='string'||!data.memo)throw new Error('Реквизиты не получены');
+   address=data.address;memo=data.memo;
+   if(!root().querySelector('.ice-ton-overlay'))return;
+   shell(notice+
+   '<div class="ice-ton-details"><div class="ice-ton-field"><label>Сеть / монета</label><div class="ice-ton-value">TON Mainnet · TON (Toncoin)</div></div>'+
+   '<div class="ice-ton-field"><label>Адрес кошелька Ice Pay</label><div class="ice-ton-value mono">'+escapeText(address)+'</div><div class="ice-ton-btnrow"><button class="ice-ton-copy" type="button" data-ice-ton-copy="address">Скопировать адрес</button></div></div>'+
+   '<div class="ice-ton-field"><label>Ваш персональный Memo (комментарий к переводу)</label><div class="ice-ton-value mono">'+escapeText(memo)+'</div><div class="ice-ton-btnrow"><button class="ice-ton-copy" type="button" data-ice-ton-copy="memo">Скопировать Memo</button></div></div>'+
+   '<div class="ice-ton-notice">Memo привязан к вашему аккаунту и может быть изменён владельцем в админке. В будущем платёж без правильного комментария потребует ручной проверки. На предоставленном скриншоте кошелька упомянут GRAM — совместимость адреса с получением TON нужно проверить до запуска.</div></div>'+
+   '<div id="ice-ton-status" role="status" aria-live="polite" class="ice-ton-status"></div>');
+ }catch(err){
+   if(root().querySelector('.ice-ton-overlay'))shell(notice+'<div class="ice-ton-status error" role="alert">'+escapeText(err.message==='Failed to fetch'?'Не удалось связаться с сервером авторизации':err.message)+'</div><button class="ice-ton-copy" data-ice-ton-retry type="button">Попробовать снова</button>');
+ }
+}
+document.addEventListener('click',async e=>{
+ const trigger=e.target.closest('[data-ice-ton]');
+ if(trigger){
+  if(trigger.dataset.iceTon==='open'){e.preventDefault();open();}
+  return;
+ }
+ if(e.target.closest('[data-ice-ton-close]')||e.target.hasAttribute('data-ice-ton-overlay')){close();return;}
+ if(e.target.closest('[data-ice-ton-retry]')){open();return;}
+ const copy=e.target.closest('[data-ice-ton-copy]');
+ if(!copy)return;
+ const val=copy.dataset.iceTonCopy==='memo'?memo:address;
+ const status=document.getElementById('ice-ton-status');
+ if(!val)return;
+ try{
+  await navigator.clipboard.writeText(val);
+  if(status)status.textContent=copy.dataset.iceTonCopy==='memo'?'Memo скопирован':'Адрес скопирован';
+ }catch{
+  if(status){status.className='ice-ton-status error';status.textContent='Не получилось скопировать. Выделите значение вручную.'}
+ }
+});
+document.addEventListener('keydown',e=>{if(e.key==='Escape'&&document.querySelector('.ice-ton-overlay'))close()});
 })();
 </script>
 </body>
