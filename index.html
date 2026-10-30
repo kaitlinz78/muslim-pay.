@@ -655,7 +655,7 @@ async function open(){
    if(!root().querySelector('.ice-ton-overlay'))return;
    shell('<div class="ice-ton-details"><div class="ice-ton-field"><label>Сеть / монета</label><div class="ice-ton-value">TON Mainnet · TON (Toncoin)</div></div>'+
    '<div class="ice-ton-field"><label>Адрес кошелька Ice Pay</label><div class="ice-ton-value mono">'+escapeText(address)+'</div><div class="ice-ton-btnrow"><button class="ice-ton-copy" type="button" data-ice-ton-copy="address">Скопировать адрес</button></div></div>'+
-   '<div class="ice-ton-field"><label>Ваш персональный Memo</label><div class="ice-ton-value mono">'+escapeText(memo)+'</div><div class="ice-ton-btnrow"><button class="ice-ton-copy" type="button" data-ice-ton-copy="memo">Скопировать Memo</button></div></div>'+
+   '<div class="ice-ton-field"><label>Мемо</label><div class="ice-ton-value mono">'+escapeText(memo)+'</div><div class="ice-ton-btnrow"><button class="ice-ton-copy" type="button" data-ice-ton-copy="memo">Скопировать Мемо</button></div></div>'+
    '</div>'+
 
    '<div id="ice-ton-status" role="status" aria-live="polite" class="ice-ton-status"></div>');
@@ -678,7 +678,7 @@ document.addEventListener('click',async e=>{
  if(!val)return;
  try{
   await navigator.clipboard.writeText(val);
-  if(status)status.textContent=copy.dataset.iceTonCopy==='memo'?'Memo скопирован':'Адрес скопирован';
+  if(status)status.textContent=copy.dataset.iceTonCopy==='memo'?'Мемо скопирован':'Адрес скопирован';
  }catch{
   if(status){status.className='ice-ton-status error';status.textContent='Не получилось скопировать. Выделите значение вручную.'}
  }
