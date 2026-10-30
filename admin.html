@@ -126,8 +126,8 @@ html:not(.owner-authenticated) .shell{display:none!important}
         <div class="card-head"><h2>Добавить нового трейдера</h2></div>
         <p class="description">Укажи индивидуальные данные для входа на <a href="https://muslim-pay.onrender.com" target="_blank" rel="noopener noreferrer">сайт Ice Pay</a>. После создания трейдер сможет войти с указанным логином и паролем.</p>
         <form id="new-trader-form" class="owner-form">
-          <label class="owner-field">Логин трейдера<input name="username" autocomplete="off" spellcheck="false" minlength="4" maxlength="32" placeholder="например, trader001" required pattern="[a-z][a-z0-9_.-]{3,31}"><small>Латинские буквы, цифры, дефис, точка. Логин должен быть уникальным.</small></label>
-          <label class="owner-field">Пароль<input name="password" type="password" minlength="12" maxlength="128" autocomplete="new-password" placeholder="Придумай надёжный пароль" required><small>Не меньше 12 символов. Пароль нельзя будет просмотреть после сохранения, но можно будет заменить.</small></label>
+          <label class="owner-field">Логин трейдера<input name="username" autocomplete="off" spellcheck="false" autocapitalize="off" minlength="1" maxlength="64" placeholder="Например, Fry, 7 или Иван" required><small>Любое название от 1 символа: цифры, кириллица, латиница, пробелы или символы. Логин должен быть уникальным.</small></label>
+          <label class="owner-field">Пароль<input name="password" type="password" minlength="1" maxlength="128" autocomplete="new-password" placeholder="Любой пароль" required><small>Можно от 1 символа. Короткие пароли легко подобрать; для реальных аккаунтов рекомендуется длинный пароль. После создания пароль не показывается.</small></label>
           <label class="owner-field">Заметка<textarea name="note" maxlength="500" placeholder="Например: имя трейдера, условия сотрудничества, комментарий"></textarea></label>
           <div class="owner-form-footer"><button class="btn primary" type="submit">+ Создать трейдера</button><span id="create-message" class="owner-message" role="status"></span></div>
         </form>
@@ -201,7 +201,7 @@ el('new-trader-form').onsubmit=async e=>{
  e.preventDefault();const b=e.target.querySelector('[type=submit]');b.disabled=true;msg('create-message','');
  try{
   const f=new FormData(e.target);
-  const p={username:String(f.get('username')).trim().toLowerCase(),password:f.get('password'),note:String(f.get('note')).trim()};
+  const p={username:String(f.get('username')).trim(),password:f.get('password'),note:String(f.get('note')).trim()};
   const data=await api('/v1/admin/traders','POST',p);
   msg('create-message','Трейдер '+data.trader.username+' создан; Memo '+data.trader.memo+'. Логин и пароль действуют для входа.',false);
   e.target.reset();
@@ -245,7 +245,7 @@ el('trader-rows').onclick=async e=>{
    f=>api('/v1/admin/traders/'+id+'/memo','PATCH',{memo:String(f.get('memo')).trim(),reason:String(f.get('reason')).trim()}));
  }else if(t.hasAttribute('data-password')){
   dialog('Сменить пароль · '+trader.username,
-  '<label class="owner-field">Новый пароль трейдера<input name="password" type="password" minlength="12" maxlength="128" required autocomplete="new-password"></label><p class="description">После замены все прежние сессии трейдера будут завершены.</p>',
+  '<label class="owner-field">Новый пароль трейдера<input name="password" type="password" minlength="1" maxlength="128" required autocomplete="new-password"></label><p class="description">Можно установить любой пароль от 1 символа. После замены все прежние сессии трейдера будут завершены.</p>',
   f=>api('/v1/admin/traders/'+id+'/password','PATCH',{password:f.get('password')}));
  }else{
   if(!confirm((trader.active?'Отключить':'Включить')+' вход трейдера '+trader.username+'?'))return;
