@@ -1,221 +1,267 @@
 'use strict';
-/* Ice Pay accounts: authenticated owner/trader access only.
- * No real-money ledger or payment crediting exists in this service.
- * Never use browser-local balances as payable funds.
+/**
+ * Ice Pay: interim authenticated account API.
+ * Render Free Key Value is VOLATILE: state can vanish on any restart.
+ * This API must NOT be used as a durable payment ledger or for real customer funds.
+ * Production replacement: auth-service-postgres.js with a permanent PostgreSQL database.
  */
-const http=require('node:http');
-const crypto=require('node:crypto');
-const {promisify}=require('node:util');
-const {Pool}=require('pg');
-const scrypt=promisify(crypto.scrypt);
-const PORT=Number(process.env.PORT||10000);
-const ALLOWED=new Set(['https://muslim-pay.onrender.com','https://ice-pay-owner.onrender.com']);
-const alphabet='23456789ABCDEFGHJKLMNPQRSTUVWXYZ';
-const hasDatabase=Boolean(process.env.DATABASE_URL);
-const pool=hasDatabase?new Pool({connectionString:process.env.DATABASE_URL,max:5,connectionTimeoutMillis:7000,statement_timeout:10000}):null;
-const attempts=new Map();
-let ready=false,ownerReady=false;
-function send(res,status,data,origin){
- res.statusCode=status;
- if(origin&&ALLOWED.has(origin)){res.setHeader('Access-Control-Allow-Origin',origin);res.setHeader('Vary','Origin');}
- res.setHeader('Cache-Control','no-store');
- res.setHeader('Content-Type','application/json; charset=utf-8');
- res.setHeader('X-Content-Type-Options','nosniff');
- res.end(JSON.stringify(data));
+const http = require('node:http');
+const crypto = require('node:crypto');
+const { promisify } = require('node:util');
+const { createClient } = require('redis');
+const scrypt = promisify(crypto.scrypt);
+const PORT = Number(process.env.PORT || 10000);
+const REDIS_URL = process.env.REDIS_URL || '';
+const OWNER_USERNAME = (process.env.OWNER_INITIAL_USERNAME || 'owner').toLowerCase();
+const ORIGINS = new Set(['https://muslim-pay.onrender.com', 'https://ice-pay-owner.onrender.com']);
+const ABC = '23456789ABCDEFGHJKLMNPQRSTUVWXYZ';
+const PREFIX = 'ice:auth:v1:';
+const LIMIT = 16384;
+let ready = false;
+let storage = null;
+function key(s) { return PREFIX + s; }
+function reply(res, status, obj, origin) {
+  res.statusCode = status;
+  if (origin && ORIGINS.has(origin)) {
+    res.setHeader('Access-Control-Allow-Origin', origin);
+    res.setHeader('Vary', 'Origin');
+  }
+  res.setHeader('Cache-Control', 'no-store');
+  res.setHeader('Content-Type', 'application/json; charset=utf-8');
+  res.setHeader('X-Content-Type-Options', 'nosniff');
+  res.end(JSON.stringify(obj));
 }
-async function body(req){
- const chunks=[];let len=0;
- for await(const c of req){len+=c.length;if(len>16384)throw Object.assign(new Error('Слишком большой запрос'),{status:413});chunks.push(c)}
- try{return JSON.parse(Buffer.concat(chunks).toString('utf8'))}catch{throw Object.assign(new Error('Неверный формат запроса'),{status:400})}
+function issue(status, message) { return Object.assign(new Error(message), { status }); }
+function loginValid(x) { return typeof x === 'string' && /^[a-z][a-z0-9_.-]{3,31}$/.test(x); }
+function passValid(x) { return typeof x === 'string' && Buffer.byteLength(x) >= 12 && Buffer.byteLength(x) <= 128; }
+function memoValid(x) { return typeof x === 'string' && /^[A-Za-z0-9][A-Za-z0-9_-]{5,39}$/.test(x); }
+function normalizeMemo(x) { return x.toUpperCase(); }
+async function pwHash(pass) {
+  const salt = crypto.randomBytes(16).toString('hex');
+  return salt + ':' + (await scrypt(pass, salt, 64)).toString('hex');
 }
-function validatePassword(p){return typeof p==='string'&&Buffer.byteLength(p,'utf8')>=12&&Buffer.byteLength(p,'utf8')<=128}
-function validateLogin(s){return typeof s==='string'&&/^[a-z][a-z0-9_.-]{3,31}$/.test(s)}
-async function makeHash(password){
- const salt=crypto.randomBytes(16).toString('hex');
- return salt+':'+(await scrypt(password,salt,64)).toString('hex');
+async function pwCheck(pass, stored) {
+  if (typeof pass !== 'string' || pass.length > 128 || typeof stored !== 'string') return false;
+  const parts = stored.split(':');
+  if (!/^[a-f0-9]{32}$/.test(parts[0] || '') || !/^[a-f0-9]{128}$/.test(parts[1] || '')) return false;
+  const digest = await scrypt(pass, parts[0], 64);
+  return crypto.timingSafeEqual(digest, Buffer.from(parts[1], 'hex'));
 }
-async function verifyPassword(password,stored){
- if(!stored||typeof password!=='string'||password.length>128)return false;
- const [salt,hex]=stored.split(':');
- if(!/^[a-f0-9]{32}$/.test(salt||'')||!/^[a-f0-9]{128}$/.test(hex||''))return false;
- const actual=await scrypt(password,salt,64);
- return crypto.timingSafeEqual(actual,Buffer.from(hex,'hex'));
+function tokenHash(s) { return crypto.createHash('sha256').update(s).digest('hex'); }
+function toPublic(a) {
+  return { id:a.id, username:a.username, role:a.role, note:a.note||'', memo:a.memo||null,
+    active:!!a.active, createdAt:a.createdAt||null, updatedAt:a.updatedAt||null };
 }
-function sessionKey(token){return crypto.createHash('sha256').update(token).digest('hex')}
-function memoCandidate(){
- return 'ICE-'+Array.from(crypto.randomBytes(14),x=>alphabet[x%alphabet.length]).join('');
+function assertStorage() {
+  if (!ready || !storage || !storage.isReady) throw issue(503, 'Хранилище аккаунтов недоступно');
 }
-async function uniqueMemo(client){
- for(let i=0;i<20;i++){
-  const memo=memoCandidate();
-  const used=await client.query('SELECT 1 FROM reserved_memos WHERE memo=$1',[memo]);
-  if(!used.rowCount)return memo;
- }
- throw new Error('Cannot allocate memo');
+async function getAcc(id) {
+  const raw = await storage.get(key('account:' + id));
+  return raw ? JSON.parse(raw) : null;
 }
-function summary(a){
- return {id:a.id,username:a.username,role:a.role,note:a.note||'',memo:a.memo||null,active:a.active,createdAt:a.created_at,updatedAt:a.updated_at};
+async function saveAcc(a) {
+  a.updatedAt = new Date().toISOString();
+  await storage.set(key('account:' + a.id), JSON.stringify(a));
 }
-async function init(){
- if(!pool){console.warn('DATABASE_URL missing; account API disabled');return}
- await pool.query('SELECT 1');
- await pool.query("CREATE TABLE IF NOT EXISTS accounts (id UUID PRIMARY KEY, username VARCHAR(32) UNIQUE NOT NULL, role VARCHAR(10) NOT NULL CHECK(role IN ('owner','trader')), password_hash TEXT NOT NULL, note VARCHAR(500) DEFAULT '', memo VARCHAR(40) UNIQUE, active BOOLEAN NOT NULL DEFAULT TRUE, created_at TIMESTAMPTZ NOT NULL DEFAULT now(), updated_at TIMESTAMPTZ NOT NULL DEFAULT now())");
- await pool.query('CREATE TABLE IF NOT EXISTS reserved_memos (memo VARCHAR(40) PRIMARY KEY, account_id UUID NOT NULL REFERENCES accounts(id), reserved_at TIMESTAMPTZ NOT NULL DEFAULT now())');
- await pool.query('CREATE TABLE IF NOT EXISTS sessions (token_hash CHAR(64) PRIMARY KEY, account_id UUID NOT NULL REFERENCES accounts(id) ON DELETE CASCADE, expires_at TIMESTAMPTZ NOT NULL, created_at TIMESTAMPTZ NOT NULL DEFAULT now())');
- await pool.query('CREATE INDEX IF NOT EXISTS sessions_expires_idx ON sessions(expires_at)');
- await pool.query('CREATE TABLE IF NOT EXISTS memo_history (id UUID PRIMARY KEY, account_id UUID NOT NULL REFERENCES accounts(id), old_memo VARCHAR(40) NOT NULL, new_memo VARCHAR(40) NOT NULL, reason VARCHAR(120) DEFAULT \'\', changed_at TIMESTAMPTZ NOT NULL DEFAULT now())');
- const count=await pool.query("SELECT COUNT(*)::int AS count FROM accounts WHERE role='owner'");
- if(count.rows[0].count===0 && process.env.OWNER_INITIAL_PASSWORD){
-   if(!validatePassword(process.env.OWNER_INITIAL_PASSWORD))throw new Error('OWNER_INITIAL_PASSWORD must have at least 12 characters');
-   const user=(process.env.OWNER_INITIAL_USERNAME||'owner').toLowerCase().trim();
-   if(!validateLogin(user))throw new Error('OWNER_INITIAL_USERNAME invalid');
-   await pool.query("INSERT INTO accounts (id,username,role,password_hash) VALUES($1,$2,'owner',$3) ON CONFLICT(username) DO NOTHING",[crypto.randomUUID(),user,await makeHash(process.env.OWNER_INITIAL_PASSWORD)]);
-   console.log('Initial Owner account created');
- }
- const ownerCount=await pool.query("SELECT COUNT(*)::int AS count FROM accounts WHERE role='owner'");
- ownerReady=ownerCount.rows[0].count>0;
- if(!ownerReady){console.warn('No Owner account: set OWNER_INITIAL_PASSWORD (12+ characters) to complete initialization');return;}
- ready=true;console.log('Ice Pay authenticated accounts ready');
+async function allocateMemo() {
+  for (let tries=0;tries<50;tries++) {
+    const random=crypto.randomBytes(14);
+    const memo='ICE-'+Array.from(random, i => ABC[i % ABC.length]).join('');
+    if (!(await storage.exists(key('memo:'+normalizeMemo(memo))))) return memo;
+  }
+  throw issue(503, 'Не удалось создать уникальный Memo');
 }
-async function authentication(req){
- const auth=String(req.headers.authorization||'');
- if(!auth.startsWith('Bearer '))return null;
- const token=auth.slice(7);
- if(!/^[a-f0-9]{64}$/.test(token))return null;
- const record=await pool.query("SELECT a.* FROM sessions s JOIN accounts a ON a.id=s.account_id WHERE s.token_hash=$1 AND s.expires_at>now() AND a.active=true LIMIT 1",[sessionKey(token)]);
- return record.rows[0]||null;
+async function ensureOwner() {
+  if (!storage?.isReady) return;
+  const password=process.env.OWNER_INITIAL_PASSWORD;
+  if (!passValid(password)) {ready=false;console.warn('OWNER_INITIAL_PASSWORD not configured or too short');return;}
+  if (!loginValid(OWNER_USERNAME)) {ready=false;console.warn('OWNER_INITIAL_USERNAME invalid');return;}
+  const usernameKey=key('username:'+OWNER_USERNAME);
+  let id=await storage.get(usernameKey);
+  if (id && await getAcc(id)) {ready=true;return;}
+  // Free Redis may have lost all keys on restart. The Owner bootstrap is restored.
+  const owner={id:crypto.randomUUID(),username:OWNER_USERNAME,role:'owner',
+    passwordHash:await pwHash(password),note:'',memo:null,active:true,sessionVersion:1,
+    createdAt:new Date().toISOString()};
+  await storage.set(usernameKey,owner.id);
+  await saveAcc(owner);
+  ready=true;
+  console.log('Owner ready; storage=volatile free Redis. Trader data does not survive Redis resets.');
 }
-function throttle(req){
- const ip=String(req.headers['x-forwarded-for']||req.socket.remoteAddress||'unknown').split(',')[0].trim();
- const now=Date.now();
- if(attempts.size>5000)attempts.clear();
- const v=attempts.get(ip)||{count:0,until:now+900000};
- if(now>v.until){v.count=0;v.until=now+900000;}
- v.count++;attempts.set(ip,v);
- return v.count<=14;
+async function initialize() {
+  if (!REDIS_URL) {console.warn('REDIS_URL missing; account API disabled');return;}
+  storage=createClient({url:REDIS_URL, socket:{connectTimeout:7000,reconnectStrategy:attempt => Math.min(300*attempt,8000)}});
+  storage.on('error', e => {ready=false;console.error('Redis connection error:',e.message)});
+  storage.on('ready', () => {ensureOwner().catch(e=>{ready=false;console.error('Owner recovery:',e.message)})});
+  await storage.connect();
+  await ensureOwner();
+  const timer=setInterval(()=>ensureOwner().catch(e=>console.error('Owner check:',e.message)),60000);
+  timer.unref();
+  console.log('Ice Pay authorization API listening on Redis (VOLATILE, DEMO ONLY)');
 }
-async function issueToken(accountId,role){
- const token=crypto.randomBytes(32).toString('hex');
- const hours=role==='owner'?8:24;
- await pool.query("INSERT INTO sessions(token_hash,account_id,expires_at) VALUES($1,$2,now()+($3::text||' hours')::interval)",[sessionKey(token),accountId,String(hours)]);
- return {token,expiresInHours:hours};
+async function parseBody(req) {
+  const chunks=[];let length=0;
+  for await(const c of req) { length+=c.length;if(length>LIMIT)throw issue(413,'Слишком большой запрос');chunks.push(c); }
+  try{return JSON.parse(Buffer.concat(chunks).toString('utf8'))}
+  catch{throw issue(400,'Неверный формат запроса');}
 }
-function checkMemo(m){return typeof m==='string'&&/^[A-Za-z0-9][A-Za-z0-9_-]{5,39}$/.test(m)}
-async function handler(req,res){
- const origin=String(req.headers.origin||'');
- if(req.method==='OPTIONS'){
-   if(!ALLOWED.has(origin))return send(res,403,{error:'Origin blocked'});
-   res.statusCode=204;
-   res.setHeader('Access-Control-Allow-Origin',origin);
-   res.setHeader('Access-Control-Allow-Methods','GET, POST, PATCH, OPTIONS');
-   res.setHeader('Access-Control-Allow-Headers','Authorization, Content-Type');
-   res.setHeader('Access-Control-Max-Age','600');
-   return res.end();
- }
- if(origin&&!ALLOWED.has(origin))return send(res,403,{error:'Недопустимый источник'});
- const url=new URL(req.url,'http://localhost');
- if(req.method==='GET'&&url.pathname==='/health')return send(res,ready?200:503,{ok:ready,dbConfigured:hasDatabase,authEnabled:ready,ownerConfigured:ownerReady},origin);
- if(url.pathname==='/')return send(res,200,{service:'Ice Pay authenticated accounts API',state:ready?'ready':'not_configured'},origin);
- if(!ready)return send(res,503,{error:'Сервер авторизации ещё не настроен. Требуется подключить PostgreSQL.'},origin);
- if(req.method==='POST'&&url.pathname==='/v1/auth/login'){
-   if(!throttle(req))return send(res,429,{error:'Слишком много попыток входа. Повторите позже.'},origin);
-   const b=await body(req);
-   const user=String(b.username||'').trim().toLowerCase(),password=b.password;
-   if(!validateLogin(user)||typeof password!=='string'||password.length>128)return send(res,401,{error:'Неверный логин или пароль'},origin);
-   const result=await pool.query('SELECT * FROM accounts WHERE username=$1 AND active=true LIMIT 1',[user]);
-   if(!result.rowCount||!(await verifyPassword(password,result.rows[0].password_hash)))return send(res,401,{error:'Неверный логин или пароль'},origin);
-   const a=result.rows[0];
-   if(b.role && b.role!==a.role)return send(res,403,{error:'Недостаточно прав доступа'},origin);
-   const session=await issueToken(a.id,a.role);
-   await pool.query('DELETE FROM sessions WHERE expires_at<now()');
-   return send(res,200,{...session,account:summary(a)},origin);
- }
- const account=await authentication(req);
- if(!account)return send(res,401,{error:'Сессия завершена. Войдите снова.'},origin);
- if(req.method==='GET'&&url.pathname==='/v1/auth/me')return send(res,200,{account:summary(account)},origin);
- if(req.method==='POST'&&url.pathname==='/v1/auth/logout'){
-   await pool.query('DELETE FROM sessions WHERE token_hash=$1',[sessionKey(req.headers.authorization.slice(7))]);
-   return send(res,200,{ok:true},origin);
- }
- if(req.method==='POST'&&url.pathname==='/v1/auth/change-password'){
-   const b=await body(req);
-   if(!(await verifyPassword(b.currentPassword,account.password_hash)))return send(res,403,{error:'Текущий пароль неверный'},origin);
-   if(!validatePassword(b.newPassword))return send(res,400,{error:'Новый пароль: от 12 до 128 байт'},origin);
-   await pool.query('UPDATE accounts SET password_hash=$1,updated_at=now() WHERE id=$2',[await makeHash(b.newPassword),account.id]);
-   await pool.query('DELETE FROM sessions WHERE account_id=$1',[account.id]);
-   return send(res,200,{ok:true,reauth:true},origin);
- }
- if(account.role!=='owner')return send(res,403,{error:'Разрешено только владельцу'},origin);
- if(req.method==='GET'&&url.pathname==='/v1/admin/traders'){
-   const rows=await pool.query("SELECT id,username,role,note,memo,active,created_at,updated_at FROM accounts WHERE role='trader' ORDER BY created_at DESC");
-   return send(res,200,{traders:rows.rows.map(summary)},origin);
- }
- if(req.method==='POST'&&url.pathname==='/v1/admin/traders'){
-   const b=await body(req);
-   const username=String(b.username||'').trim().toLowerCase();
-   if(!validateLogin(username))return send(res,400,{error:'Логин: 4–32 символа, латиница, цифры, точка, - или _'},origin);
-   if(!validatePassword(b.password))return send(res,400,{error:'Пароль: не менее 12 символов'},origin);
-   const note=String(b.note||'').trim();
-   if(note.length>500)return send(res,400,{error:'Заметка: до 500 символов'},origin);
-   const c=await pool.connect();
-   try{
-     await c.query('BEGIN');
-     const memo=await uniqueMemo(c),id=crypto.randomUUID();
-     const insert=await c.query("INSERT INTO accounts(id,username,role,password_hash,note,memo) VALUES ($1,$2,'trader',$3,$4,$5) RETURNING id,username,role,note,memo,active,created_at,updated_at",[id,username,await makeHash(b.password),note,memo]);
-     await c.query('INSERT INTO reserved_memos(memo,account_id) VALUES($1,$2)',[memo,id]);
-     await c.query('COMMIT');
-     return send(res,201,{trader:summary(insert.rows[0]),message:'Трейдер создан. Он может войти под указанным логином и паролем.'},origin);
-   }catch(e){
-     await c.query('ROLLBACK');
-     if(e.code==='23505')return send(res,409,{error:'Такой логин уже используется'},origin);
-     throw e;
-   }finally{c.release()}
- }
- const match=url.pathname.match(/^\/v1\/admin\/traders\/([0-9a-f-]{36})\/(memo|password|status)$/);
- if(match&&req.method==='PATCH'){
-   const [,id,task]=match,b=await body(req);
-   const c=await pool.connect();
-   try{
-    await c.query('BEGIN');
-    const found=await c.query("SELECT * FROM accounts WHERE id=$1 AND role='trader' FOR UPDATE",[id]);
-    if(!found.rowCount){await c.query('ROLLBACK');return send(res,404,{error:'Трейдер не найден'},origin)}
-    const a=found.rows[0];let changed;
-    if(task==='memo'){
-      const memo=String(b.memo||'').trim(),reason=String(b.reason||'').trim();
-      if(!checkMemo(memo)||reason.length>120){await c.query('ROLLBACK');return send(res,400,{error:'Memo: 6–40 символов; латиница, цифры, - и _'},origin)}
-      if(memo.toUpperCase()===a.memo.toUpperCase()){await c.query('ROLLBACK');return send(res,400,{error:'Новый Memo совпадает с текущим'},origin)}
-      const taken=await c.query('SELECT 1 FROM reserved_memos WHERE upper(memo)=upper($1)',[memo]);
-      if(taken.rowCount){await c.query('ROLLBACK');return send(res,409,{error:'Memo уже используется или был использован ранее'},origin)}
-      await c.query('INSERT INTO reserved_memos(memo,account_id) VALUES($1,$2)',[memo,id]);
-      await c.query('INSERT INTO memo_history(id,account_id,old_memo,new_memo,reason) VALUES($1,$2,$3,$4,$5)',[crypto.randomUUID(),id,a.memo,memo,reason]);
-      changed=await c.query("UPDATE accounts SET memo=$1,updated_at=now() WHERE id=$2 RETURNING id,username,role,note,memo,active,created_at,updated_at",[memo,id]);
-    }else if(task==='password'){
-      if(!validatePassword(b.password)){await c.query('ROLLBACK');return send(res,400,{error:'Пароль: не менее 12 символов'},origin)}
-      changed=await c.query("UPDATE accounts SET password_hash=$1,updated_at=now() WHERE id=$2 RETURNING id,username,role,note,memo,active,created_at,updated_at",[await makeHash(b.password),id]);
-      await c.query('DELETE FROM sessions WHERE account_id=$1',[id]);
-    }else{
-      if(typeof b.active!=='boolean'){await c.query('ROLLBACK');return send(res,400,{error:'Ожидается active=true/false'},origin)}
-      changed=await c.query("UPDATE accounts SET active=$1,updated_at=now() WHERE id=$2 RETURNING id,username,role,note,memo,active,created_at,updated_at",[b.active,id]);
-      if(!b.active)await c.query('DELETE FROM sessions WHERE account_id=$1',[id]);
+async function auth(req) {
+  const header=String(req.headers.authorization||'');
+  if (!header.startsWith('Bearer ')) return null;
+  const token=header.slice(7);
+  if(!/^[0-9a-f]{64}$/.test(token))return null;
+  const raw=await storage.get(key('session:'+tokenHash(token)));
+  if(!raw)return null;
+  const session=JSON.parse(raw);
+  const account=await getAcc(session.accountId);
+  if(!account||!account.active||account.sessionVersion!==session.version)return null;
+  return {account,token};
+}
+async function rateLimit(req) {
+  const ip=String(req.headers['x-forwarded-for']||req.socket.remoteAddress||'unknown').split(',')[0].trim();
+  const hashed=crypto.createHash('sha256').update(ip).digest('hex');
+  const k=key('rate:'+hashed);
+  const count=await storage.incr(k);
+  if(count===1)await storage.expire(k,900);
+  return count<=12;
+}
+async function newSession(account) {
+  const token=crypto.randomBytes(32).toString('hex');
+  const hours=account.role==='owner'?8:24;
+  const raw=JSON.stringify({accountId:account.id,version:account.sessionVersion});
+  await storage.set(key('session:'+tokenHash(token)),raw,{EX:hours*3600});
+  return {token,expiresInHours:hours};
+}
+async function listTraders() {
+  const ids=await storage.sMembers(key('trader-ids'));
+  const accounts=(await Promise.all(ids.map(getAcc))).filter(Boolean);
+  return accounts.sort((a,b)=>b.createdAt.localeCompare(a.createdAt)).map(toPublic);
+}
+function validateMemoChange(a,memo) {
+  if(!memoValid(memo))throw issue(400,'Memo: от 6 до 40 символов, латиница, цифры, дефис или _');
+  if(normalizeMemo(memo)===normalizeMemo(a.memo))throw issue(400,'Этот Memo уже назначен');
+}
+async function handle(req,res) {
+  const origin=String(req.headers.origin||'');
+  if(req.method==='OPTIONS') {
+    if(!ORIGINS.has(origin))return reply(res,403,{error:'Источник запрещён'},origin);
+    res.statusCode=204;
+    res.setHeader('Access-Control-Allow-Origin',origin);
+    res.setHeader('Access-Control-Allow-Methods','GET,POST,PATCH,OPTIONS');
+    res.setHeader('Access-Control-Allow-Headers','Authorization,Content-Type');
+    res.setHeader('Access-Control-Max-Age','600');
+    return res.end();
+  }
+  if(origin&&!ORIGINS.has(origin))return reply(res,403,{error:'Источник запрещён'},origin);
+  const url=new URL(req.url,'http://localhost');
+  if(req.method==='GET'&&url.pathname==='/health') {
+    return reply(res,ready?200:503,{ok:ready,authEnabled:ready,storage:'volatile-free-redis',persistent:false,ownerConfigured:ready},origin);
+  }
+  if(url.pathname==='/')return reply(res,200,{service:'Ice Pay account API',authEnabled:ready,persistent:false},origin);
+  assertStorage();
+  if(req.method==='POST'&&url.pathname==='/v1/auth/login') {
+    if(!(await rateLimit(req)))throw issue(429,'Слишком много попыток входа. Повторите через 15 минут');
+    const data=await parseBody(req);
+    const username=String(data.username||'').trim().toLowerCase();
+    const password=data.password;
+    if(!loginValid(username)||typeof password!=='string'||password.length>128)throw issue(401,'Неверный логин или пароль');
+    const id=await storage.get(key('username:'+username));
+    const account=id?await getAcc(id):null;
+    if(!account||!account.active||!(await pwCheck(password,account.passwordHash)))
+      throw issue(401,'Неверный логин или пароль');
+    if(data.role&&data.role!==account.role)throw issue(403,'Недостаточно прав доступа');
+    const session=await newSession(account);
+    return reply(res,200,{...session,account:toPublic(account),storageVolatile:true},origin);
+  }
+  const cred=await auth(req);
+  if(!cred)throw issue(401,'Сессия завершена. Войдите снова');
+  const {account,token}=cred;
+  if(req.method==='GET'&&url.pathname==='/v1/auth/me')
+    return reply(res,200,{account:toPublic(account),storageVolatile:true},origin);
+  if(req.method==='POST'&&url.pathname==='/v1/auth/logout') {
+    await storage.del(key('session:'+tokenHash(token)));
+    return reply(res,200,{ok:true},origin);
+  }
+  if(req.method==='POST'&&url.pathname==='/v1/auth/change-password'){
+    const data=await parseBody(req);
+    if(!(await pwCheck(data.currentPassword,account.passwordHash)))throw issue(403,'Текущий пароль неверный');
+    if(!passValid(data.newPassword))throw issue(400,'Новый пароль: минимум 12 символов');
+    account.passwordHash=await pwHash(data.newPassword);
+    account.sessionVersion++;
+    await saveAcc(account);
+    return reply(res,200,{ok:true,reauth:true},origin);
+  }
+  if(account.role!=='owner')throw issue(403,'Разрешено только владельцу');
+  if(req.method==='GET'&&url.pathname==='/v1/admin/traders') {
+    return reply(res,200,{traders:await listTraders(),storageVolatile:true},origin);
+  }
+  if(req.method==='POST'&&url.pathname==='/v1/admin/traders'){
+    const data=await parseBody(req);
+    const username=String(data.username||'').trim().toLowerCase();
+    if(!loginValid(username))throw issue(400,'Логин: 4–32 символа, латиница, цифры, точка, - или _');
+    if(!passValid(data.password))throw issue(400,'Пароль: минимум 12 символов');
+    const note=String(data.note||'').trim();
+    if(note.length>500)throw issue(400,'Заметка не больше 500 символов');
+    const nameKey=key('username:'+username);
+    if(await storage.exists(nameKey))throw issue(409,'Такой логин уже существует');
+    const id=crypto.randomUUID();
+    const memo=await allocateMemo();
+    // Reserve both the login and memo before writing the trader.
+    const reserved=await storage.set(nameKey,id,{NX:true});
+    if(reserved!=='OK')throw issue(409,'Такой логин уже существует');
+    const memoKey=key('memo:'+normalizeMemo(memo));
+    const reservedMemo=await storage.set(memoKey,id,{NX:true});
+    if(reservedMemo!=='OK') {await storage.del(nameKey);throw issue(409,'Не получилось зарезервировать Memo');}
+    try {
+      const trader={id,username,role:'trader',passwordHash:await pwHash(data.password),
+        note,memo,active:true,sessionVersion:1,createdAt:new Date().toISOString()};
+      await saveAcc(trader);
+      await storage.sAdd(key('trader-ids'),id);
+      return reply(res,201,{trader:toPublic(trader),message:'Трейдер создан; логин и пароль активны. Хранилище временное.'},origin);
+    }catch(e) {await storage.del(nameKey,memoKey,key('account:'+id));throw e;}
+  }
+  const match=url.pathname.match(/^\/v1\/admin\/traders\/([a-f0-9-]{36})\/(memo|password|status)$/);
+  if(match&&req.method==='PATCH'){
+    const id=match[1],op=match[2],data=await parseBody(req);
+    const trader=await getAcc(id);
+    if(!trader||trader.role!=='trader')throw issue(404,'Трейдер не найден');
+    if(op==='memo') {
+      const memo=String(data.memo||'').trim();
+      const reason=String(data.reason||'').trim();
+      validateMemoChange(trader,memo);
+      if(reason.length>120)throw issue(400,'Причина: не более 120 символов');
+      const candidate=key('memo:'+normalizeMemo(memo));
+      if(await storage.set(candidate,id,{NX:true})!=='OK')throw issue(409,'Memo уже используется или находится в архиве');
+      const oldMemo=trader.memo;
+      trader.memo=memo;
+      await saveAcc(trader);
+      await storage.lPush(key('memo-history'),JSON.stringify({
+        username:trader.username,oldMemo,newMemo:memo,reason,changedAt:new Date().toISOString()
+      }));
+      await storage.lTrim(key('memo-history'),0,99);
+    }else if(op==='password'){
+      if(!passValid(data.password))throw issue(400,'Пароль: минимум 12 символов');
+      trader.passwordHash=await pwHash(data.password);
+      trader.sessionVersion++;
+      await saveAcc(trader);
+    }else {
+      if(typeof data.active!=='boolean')throw issue(400,'Ожидается true или false');
+      trader.active=data.active;
+      if(!data.active)trader.sessionVersion++;
+      await saveAcc(trader);
     }
-    await c.query('COMMIT');
-    return send(res,200,{trader:summary(changed.rows[0]),ok:true},origin);
-   }catch(e){
-    await c.query('ROLLBACK');
-    if(e.code==='23505')return send(res,409,{error:'Уже используется'},origin);
-    throw e;
-   }finally{c.release()}
- }
- if(req.method==='GET'&&url.pathname==='/v1/admin/memo-history'){
-   const rows=await pool.query('SELECT m.*,a.username FROM memo_history m JOIN accounts a ON a.id=m.account_id ORDER BY m.changed_at DESC LIMIT 100');
-   return send(res,200,{history:rows.rows.map(x=>({username:x.username,oldMemo:x.old_memo,newMemo:x.new_memo,reason:x.reason,changedAt:x.changed_at}))},origin);
- }
- return send(res,404,{error:'Маршрут не найден'},origin);
+    return reply(res,200,{trader:toPublic(trader),ok:true},origin);
+  }
+  if(req.method==='GET'&&url.pathname==='/v1/admin/memo-history'){
+    const values=await storage.lRange(key('memo-history'),0,99);
+    return reply(res,200,{history:values.map(x=>JSON.parse(x))},origin);
+  }
+  throw issue(404,'Маршрут не найден');
 }
-http.createServer((req,res)=>handler(req,res).catch(e=>{
- console.error('Ice Pay auth error',e.code||e.message);
- if(!res.headersSent)send(res,e.status||500,{error:e.status?e.message:'Ошибка сервера'},req.headers.origin);
+http.createServer((req,res)=>handle(req,res).catch(err=>{
+  if(err.status!==401&&err.status!==429)console.error('Ice Pay auth:',err.message);
+  if(!res.headersSent)reply(res,err.status||500,{error:err.status?err.message:'Ошибка сервера'},req.headers.origin);
 })).listen(PORT,'0.0.0.0',()=>{
- console.log('Ice Pay auth API listening',PORT);
- init().catch(e=>console.error('Ice Pay accounts initialization failed',e.message));
+  console.log('Ice Pay accounts API HTTP started on',PORT);
+  initialize().catch(e=>{ready=false;console.error('Ice Pay accounts backend not ready:',e.message)});
 });
