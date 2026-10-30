@@ -9,6 +9,8 @@ const http = require('node:http');
 const crypto = require('node:crypto');
 const { promisify } = require('node:util');
 const { createClient } = require('redis');
+const dns = require('node:dns').promises;
+const net = require('node:net');
 const scrypt = promisify(crypto.scrypt);
 const PORT = Number(process.env.PORT || 10000);
 const REDIS_URL = process.env.REDIS_URL || '';
@@ -90,7 +92,13 @@ async function ensureOwner() {
 }
 async function initialize() {
   if (!REDIS_URL) {console.warn('REDIS_URL missing; account API disabled');return;}
-  storage=createClient({url:REDIS_URL, socket:{connectTimeout:7000,reconnectStrategy:attempt => Math.min(300*attempt,8000)}});
+  const redisHost=new URL(REDIS_URL).hostname;
+  dns.lookup(redisHost).then(x=>console.log('Internal KV DNS:',x.address,x.family)).catch(e=>console.error('Internal KV DNS error:',e.code,e.message));
+  const probe=net.connect({host:redisHost,port:6379,timeout:5000});
+  probe.once('connect',()=>{console.log('Internal KV TCP reachable');probe.destroy()});
+  probe.once('error',e=>console.error('Internal KV TCP error:',e.code,e.message));
+  probe.once('timeout',()=>{console.error('Internal KV TCP timeout');probe.destroy()});
+  storage=createClient({url:REDIS_URL, socket:{connectTimeout:10000,reconnectStrategy:attempt => Math.min(500*attempt,8000)}});
   storage.on('error', e => {ready=false;console.error('Redis connection error:',e.message)});
   storage.on('ready', () => {ensureOwner().catch(e=>{ready=false;console.error('Owner recovery:',e.message)})});
   await storage.connect();
