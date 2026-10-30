@@ -632,7 +632,7 @@ function close(){
  if(!document.getElementById('ice-auth-overlay'))document.body.style.overflow='';
 }
 function shell(body){
- root().innerHTML='<div class="ice-ton-overlay" data-ice-ton-overlay><section class="ice-ton-dialog" role="dialog" aria-modal="true" aria-label="TON депозит"><div class="ice-ton-title-row"><div><span class="ice-ton-chip">TON · Mainnet</span><h2>Пополнение TON</h2></div><button class="ice-ton-close" type="button" data-ice-ton-close aria-label="Закрыть">×</button></div>'+body+'</section></div>';
+ root().innerHTML='<div class="ice-ton-overlay" data-ice-ton-overlay><section class="ice-ton-dialog" role="dialog" aria-modal="true" aria-label="TON депозит"><div class="ice-ton-title-row"><div><span class="ice-ton-chip">TON · Демо, без зачисления</span><h2>Пополнение TON</h2></div><button class="ice-ton-close" type="button" data-ice-ton-close aria-label="Закрыть">×</button></div>'+body+'</section></div>';
  document.body.style.overflow='hidden';
 }
 
@@ -655,9 +655,9 @@ async function open(){
    if(!root().querySelector('.ice-ton-overlay'))return;
    shell('<div class="ice-ton-details"><div class="ice-ton-field"><label>Сеть / монета</label><div class="ice-ton-value">TON Mainnet · TON (Toncoin)</div></div>'+
    '<div class="ice-ton-field"><label>Адрес кошелька Ice Pay</label><div class="ice-ton-value mono">'+escapeText(address)+'</div><div class="ice-ton-btnrow"><button class="ice-ton-copy" type="button" data-ice-ton-copy="address">Скопировать адрес</button></div></div>'+
-   '<div class="ice-ton-field"><label>Ваш персональный Memo (комментарий к переводу)</label><div class="ice-ton-value mono">'+escapeText(memo)+'</div><div class="ice-ton-btnrow"><button class="ice-ton-copy" type="button" data-ice-ton-copy="memo">Скопировать Memo</button></div></div>'+
+   '<div class="ice-ton-field"><label>Ваш персональный Memo</label><div class="ice-ton-value mono">'+escapeText(memo)+'</div><div class="ice-ton-btnrow"><button class="ice-ton-copy" type="button" data-ice-ton-copy="memo">Скопировать Memo</button></div></div>'+
    '</div>'+
-   '<div class="ice-ton-brief">Автозачисление TON пока не подключено.</div>'+
+
    '<div id="ice-ton-status" role="status" aria-live="polite" class="ice-ton-status"></div>');
  }catch(err){
    if(root().querySelector('.ice-ton-overlay'))shell('<div class="ice-ton-status error" role="alert">'+escapeText(err.message==='Failed to fetch'?'Не удалось связаться с сервером авторизации':err.message)+'</div><button class="ice-ton-copy" data-ice-ton-retry type="button">Попробовать снова</button>');
