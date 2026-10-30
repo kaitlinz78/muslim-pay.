@@ -201,8 +201,6 @@ html:not(.ice-auth-ok) #shell{display:none!important}
 .ice-ton-title-row h2{font-size:22px;margin:8px 0 0;font-weight:850;color:#1853a0}
 .ice-ton-chip{display:inline-flex;padding:5px 9px;border:1px solid #cee5ff;background:#e6f3ff;color:#2366b5;border-radius:30px;font-size:10px;font-weight:850}
 .ice-ton-close{display:grid;place-items:center;border-radius:12px;background:#fff;border:1px solid #d1e1f4;color:#35669f;min-width:37px;min-height:37px;font-size:24px;line-height:1}
-.ice-ton-alert{padding:14px;border:1px solid #f0d9a9;background:#fff7e5;color:#825b23;border-radius:14px;font-size:12px;line-height:1.7;margin-bottom:17px}
-.ice-ton-alert strong{display:block;font-weight:850;font-size:12px;margin-bottom:3px}
 .ice-ton-details{display:grid;gap:13px}.ice-ton-field{display:grid;gap:7px}
 .ice-ton-field label{font-size:11px;color:#718eae;font-weight:800}
 .ice-ton-value{background:#fff;border-radius:12px;border:1px solid #d4e6fb;color:#25548e;font-weight:800;padding:13px 14px;font-size:12px;overflow-wrap:anywhere;line-height:1.6;user-select:all}
@@ -210,11 +208,12 @@ html:not(.ice-auth-ok) #shell{display:none!important}
 .ice-ton-btnrow{display:flex;flex-wrap:wrap;gap:8px}
 .ice-ton-copy{border-radius:12px;border:1px solid #c8e0fb;background:#e3f1ff;color:#235fa9;font-size:11px;font-weight:850;padding:10px 14px;min-height:40px}
 .ice-ton-copy:hover{background:#d9ebff}
-.ice-ton-notice{background:#fff;border:1px solid #deeafa;border-radius:13px;padding:14px;font-size:11px;color:#7891ae;line-height:1.7}
 .ice-ton-status{margin:11px 0 0;font-size:12px;color:#4b80b3;min-height:18px;line-height:1.6}
 .ice-ton-status.error{color:#b54f63}
 .ice-ton-loading{font-size:13px;color:#5e7eaa;line-height:1.8;text-align:center;padding:28px 10px}
 @media(max-width:800px){.ice-ton-dialog{padding:20px}.ice-ton-overlay{align-items:flex-end;padding:10px}.ice-ton-dialog{max-height:calc(100dvh - 20px);border-radius:22px 22px 15px 15px}.ice-ton-wallet-btn{flex:1 1 100%}.ice-ton-title-row h2{font-size:20px}}
+
+.ice-ton-brief{margin-top:12px;color:#8798ad;font-size:11px;line-height:1.5}
 </style>
 </head>
 <body>
@@ -636,12 +635,12 @@ function shell(body){
  root().innerHTML='<div class="ice-ton-overlay" data-ice-ton-overlay><section class="ice-ton-dialog" role="dialog" aria-modal="true" aria-label="TON депозит"><div class="ice-ton-title-row"><div><span class="ice-ton-chip">TON · Mainnet</span><h2>Пополнение TON</h2></div><button class="ice-ton-close" type="button" data-ice-ton-close aria-label="Закрыть">×</button></div>'+body+'</section></div>';
  document.body.style.overflow='hidden';
 }
-const notice='<div class="ice-ton-alert" role="alert"><strong>Режим предварительной проверки</strong>Платежи на TON пока не отслеживаются и не зачисляются на баланс Ice Pay. Не отправляйте реальные деньги в расчёте на автоматическое пополнение.</div>';
+
 async function open(){
  if(!document.documentElement.classList.contains('ice-auth-ok'))return;
  const token=sessionStorage.getItem('ice-pay-trader-token');
- if(!token){shell(notice+'<div class="ice-ton-status error">Необходимо войти в аккаунт трейдера.</div>');return;}
- shell(notice+'<div class="ice-ton-loading">Загружаем ваши персональные реквизиты…</div>');
+ if(!token){shell('<div class="ice-ton-status error">Необходимо войти в аккаунт трейдера.</div>');return;}
+ shell('<div class="ice-ton-loading">Загружаем ваши персональные реквизиты…</div>');
  try{
    const controller=new AbortController();
    const timer=setTimeout(()=>controller.abort(),16000);
@@ -654,14 +653,14 @@ async function open(){
    if(typeof data.address!=='string'||data.address.length!==ADDRESS_LENGTH||typeof data.memo!=='string'||!data.memo)throw new Error('Реквизиты не получены');
    address=data.address;memo=data.memo;
    if(!root().querySelector('.ice-ton-overlay'))return;
-   shell(notice+
-   '<div class="ice-ton-details"><div class="ice-ton-field"><label>Сеть / монета</label><div class="ice-ton-value">TON Mainnet · TON (Toncoin)</div></div>'+
+   shell('<div class="ice-ton-details"><div class="ice-ton-field"><label>Сеть / монета</label><div class="ice-ton-value">TON Mainnet · TON (Toncoin)</div></div>'+
    '<div class="ice-ton-field"><label>Адрес кошелька Ice Pay</label><div class="ice-ton-value mono">'+escapeText(address)+'</div><div class="ice-ton-btnrow"><button class="ice-ton-copy" type="button" data-ice-ton-copy="address">Скопировать адрес</button></div></div>'+
    '<div class="ice-ton-field"><label>Ваш персональный Memo (комментарий к переводу)</label><div class="ice-ton-value mono">'+escapeText(memo)+'</div><div class="ice-ton-btnrow"><button class="ice-ton-copy" type="button" data-ice-ton-copy="memo">Скопировать Memo</button></div></div>'+
-   '<div class="ice-ton-notice">Memo привязан к вашему аккаунту и может быть изменён владельцем в админке. В будущем платёж без правильного комментария потребует ручной проверки. На предоставленном скриншоте кошелька упомянут GRAM — совместимость адреса с получением TON нужно проверить до запуска.</div></div>'+
+   '</div>'+
+   '<div class="ice-ton-brief">Автозачисление TON пока не подключено.</div>'+
    '<div id="ice-ton-status" role="status" aria-live="polite" class="ice-ton-status"></div>');
  }catch(err){
-   if(root().querySelector('.ice-ton-overlay'))shell(notice+'<div class="ice-ton-status error" role="alert">'+escapeText(err.message==='Failed to fetch'?'Не удалось связаться с сервером авторизации':err.message)+'</div><button class="ice-ton-copy" data-ice-ton-retry type="button">Попробовать снова</button>');
+   if(root().querySelector('.ice-ton-overlay'))shell('<div class="ice-ton-status error" role="alert">'+escapeText(err.message==='Failed to fetch'?'Не удалось связаться с сервером авторизации':err.message)+'</div><button class="ice-ton-copy" data-ice-ton-retry type="button">Попробовать снова</button>');
  }
 }
 document.addEventListener('click',async e=>{
