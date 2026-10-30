@@ -213,6 +213,21 @@ async function handle(req,res) {
   const {account,token}=cred;
   if(req.method==='GET'&&url.pathname==='/v1/auth/me')
     return reply(res,200,{account:toPublic(account),storageVolatile:true},origin);
+  if(req.method==='GET'&&url.pathname==='/v1/trader/ton-deposit') {
+    if(account.role!=='trader')throw issue(403,'Доступ только трейдеру');
+    if(!memoValid(account.memo))throw issue(409,'Для трейдера ещё не назначен корректный Memo');
+    return reply(res,200,{
+      network:'TON Mainnet',
+      asset:'TON',
+      address:'UQAgFVjnzg6AVfcEyGHdlxldESgjfoos2I8Nn42sU4f_0ViE',
+      memo:account.memo,
+      accountId:account.id,
+      status:'preview_only',
+      autoCreditEnabled:false,
+      depositLedgerEnabled:false,
+      note:'Реквизиты для предварительной проверки. Автозачисление и реальный учёт депозитов пока отключены.'
+    },origin);
+  }
   if(req.method==='POST'&&url.pathname==='/v1/auth/logout') {
     await storage.del(key('session:'+tokenHash(token)));
     return reply(res,200,{ok:true},origin);
