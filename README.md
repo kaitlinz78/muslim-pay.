@@ -1,4 +1,4 @@
-# Muslim Pay
+# ВОВА КОЛОКОЛЬЦЕВ
 
 Standalone responsive interactive demo based on user-provided screenshots. No connection to CRYPTONEX.
 
