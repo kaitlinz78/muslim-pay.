@@ -14,7 +14,7 @@ const alphabet='23456789ABCDEFGHJKLMNPQRSTUVWXYZ';
 const hasDatabase=Boolean(process.env.DATABASE_URL);
 const pool=hasDatabase?new Pool({connectionString:process.env.DATABASE_URL,max:5,connectionTimeoutMillis:7000,statement_timeout:10000}):null;
 const attempts=new Map();
-let ready=false;
+let ready=false,ownerReady=false;
 function send(res,status,data,origin){
  res.statusCode=status;
  if(origin&&ALLOWED.has(origin)){res.setHeader('Access-Control-Allow-Origin',origin);res.setHeader('Vary','Origin');}
@@ -72,6 +72,9 @@ async function init(){
    await pool.query("INSERT INTO accounts (id,username,role,password_hash) VALUES($1,$2,'owner',$3) ON CONFLICT(username) DO NOTHING",[crypto.randomUUID(),user,await makeHash(process.env.OWNER_INITIAL_PASSWORD)]);
    console.log('Initial Owner account created');
  }
+ const ownerCount=await pool.query("SELECT COUNT(*)::int AS count FROM accounts WHERE role='owner'");
+ ownerReady=ownerCount.rows[0].count>0;
+ if(!ownerReady){console.warn('No Owner account: set OWNER_INITIAL_PASSWORD (12+ characters) to complete initialization');return;}
  ready=true;console.log('Ice Pay authenticated accounts ready');
 }
 async function authentication(req){
@@ -111,7 +114,7 @@ async function handler(req,res){
  }
  if(origin&&!ALLOWED.has(origin))return send(res,403,{error:'Недопустимый источник'});
  const url=new URL(req.url,'http://localhost');
- if(req.method==='GET'&&url.pathname==='/health')return send(res,ready?200:503,{ok:ready,dbConfigured:hasDatabase,authEnabled:ready,ownerConfigured:Boolean(process.env.OWNER_INITIAL_PASSWORD)},origin);
+ if(req.method==='GET'&&url.pathname==='/health')return send(res,ready?200:503,{ok:ready,dbConfigured:hasDatabase,authEnabled:ready,ownerConfigured:ownerReady},origin);
  if(url.pathname==='/')return send(res,200,{service:'Ice Pay authenticated accounts API',state:ready?'ready':'not_configured'},origin);
  if(!ready)return send(res,503,{error:'Сервер авторизации ещё не настроен. Требуется подключить PostgreSQL.'},origin);
  if(req.method==='POST'&&url.pathname==='/v1/auth/login'){
