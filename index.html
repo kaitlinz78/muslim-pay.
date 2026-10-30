@@ -115,6 +115,30 @@ body{background:radial-gradient(ellipse 60% 40% at 90% 0%,var(--ui-glow),transpa
 .sidebar-header,.sidebar-footer,.nav-link,.stat-cell,.stat-panel-head,.stat-panel-foot>div,.metric,.info-row,.data-table td{border-color:var(--ui-border)!important}
 .nav-link{color:var(--ui-ink)!important}.nav-link svg{color:var(--ui-main)!important}
 .nav-link.active,.nav-link:hover{background:var(--ui-glow)!important;color:var(--ui-main)!important;border-color:var(--ui-main)!important;box-shadow:none!important}
+/* Selected navigation icons: keep the line artwork visible in every theme.
+   The legacy Ice Blue rule painted the SVG itself solid blue, hiding its stroke. */
+.sidebar .nav-link svg{
+ background:var(--ui-soft)!important;
+ border-color:var(--ui-border)!important;
+ color:var(--ui-main)!important;
+ stroke:currentColor!important;
+ fill:none!important;
+ box-shadow:none!important
+}
+.sidebar .nav-link.active svg,
+.sidebar .nav-link.active:hover svg{
+ background:var(--ui-glow)!important;
+ border-color:var(--ui-main)!important;
+ color:var(--ui-main)!important;
+ stroke:currentColor!important;
+ fill:none!important;
+ box-shadow:none!important
+}
+.sidebar .nav-link:hover:not(.active) svg{
+ background:var(--ui-glow)!important;
+ color:var(--ui-main)!important;
+ border-color:var(--ui-border)!important
+}
 .nav-heading:after{background:linear-gradient(90deg,var(--ui-main),transparent)!important}
 .topbar{background:var(--ui-soft)!important;border-color:var(--ui-border)!important;box-shadow:0 2px 14px var(--ui-shadow)!important}
 .top-actions,.worker-box,.rate-box,.section-card,.surface-card,.stat-panel,.metric-grid,.wallet-tile,.mini-card,.toggle-row,.empty-state,.period-toolbar,.modal,.segmented,.stat-cell,.stat-panel-foot>div,.data-table{background:var(--ui-card)!important;border-color:var(--ui-border)!important;color:var(--ui-ink)!important;box-shadow:0 7px 20px var(--ui-shadow)!important}
