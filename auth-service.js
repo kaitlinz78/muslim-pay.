@@ -36,6 +36,8 @@ function reply(res, status, obj, origin) {
 function issue(status, message) { return Object.assign(new Error(message), { status }); }
 function loginValid(x) { return typeof x === 'string' && /^[a-z][a-z0-9_.-]{3,31}$/.test(x); }
 function passValid(x) { return typeof x === 'string' && Buffer.byteLength(x) >= 12 && Buffer.byteLength(x) <= 128; }
+function traderLoginValid(x) { return typeof x === 'string' && x.length >= 1 && x.length <= 64 && !/[\x00-\x1f\x7f]/.test(x); }
+function traderPassValid(x) { return typeof x === 'string' && x.length >= 1 && x.length <= 128 && Buffer.byteLength(x,'utf8') <= 512; }
 function memoValid(x) { return typeof x === 'string' && /^[A-Za-z0-9][A-Za-z0-9_-]{5,39}$/.test(x); }
 function normalizeMemo(x) { return x.toUpperCase(); }
 async function pwHash(pass) {
@@ -197,7 +199,7 @@ async function handle(req,res) {
     const data=await parseBody(req);
     const username=String(data.username||'').trim().toLowerCase();
     const password=data.password;
-    if(!loginValid(username)||typeof password!=='string'||password.length>128)throw issue(401,'Неверный логин или пароль');
+    if(!traderLoginValid(username)||!traderPassValid(password))throw issue(401,'Неверный логин или пароль');
     const id=await storage.get(key('username:'+username));
     const account=id?await getAcc(id):null;
     if(!account||!account.active||!(await pwCheck(password,account.passwordHash)))
@@ -230,12 +232,12 @@ async function handle(req,res) {
   }
   if(req.method==='POST'&&url.pathname==='/v1/admin/traders'){
     const data=await parseBody(req);
-    const username=String(data.username||'').trim().toLowerCase();
-    if(!loginValid(username))throw issue(400,'Логин: 4–32 символа, латиница, цифры, точка, - или _');
-    if(!passValid(data.password))throw issue(400,'Пароль: минимум 12 символов');
+    const username=String(data.username??'').trim();
+    if(!traderLoginValid(username))throw issue(400,'Логин: от 1 до 64 символов, можно цифры, кириллицу, пробелы и спецсимволы');
+    if(!traderPassValid(data.password))throw issue(400,'Пароль: от 1 до 128 символов');
     const note=String(data.note||'').trim();
     if(note.length>500)throw issue(400,'Заметка не больше 500 символов');
-    const nameKey=key('username:'+username);
+    const nameKey=key('username:'+username.toLowerCase());
     if(await storage.exists(nameKey))throw issue(409,'Такой логин уже существует');
     const id=crypto.randomUUID();
     const memo=await allocateMemo();
@@ -273,7 +275,7 @@ async function handle(req,res) {
       }));
       await storage.lTrim(key('memo-history'),0,99);
     }else if(op==='password'){
-      if(!passValid(data.password))throw issue(400,'Пароль: минимум 12 символов');
+      if(!traderPassValid(data.password))throw issue(400,'Пароль: от 1 до 128 символов');
       trader.passwordHash=await pwHash(data.password);
       trader.sessionVersion++;
       await saveAcc(trader);
