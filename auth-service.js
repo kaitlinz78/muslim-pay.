@@ -19,6 +19,10 @@ const ORIGINS = new Set(['https://muslim-pay.onrender.com', 'https://ice-pay-own
 const ABC = '23456789ABCDEFGHJKLMNPQRSTUVWXYZ';
 const PREFIX = 'ice:auth:v1:';
 const LIMIT = 16384;
+const MIN_INSURANCE_USDT = 500;
+// Only a verified server-side insurance ledger may unlock work. Never trust browser balances.
+// No payment verification integration is connected yet, so new accounts begin at 0.
+
 let ready = false;
 let storage = null;
 function key(s) { return PREFIX + s; }
@@ -54,7 +58,7 @@ async function pwCheck(pass, stored) {
 function tokenHash(s) { return crypto.createHash('sha256').update(s).digest('hex'); }
 function toPublic(a) {
   return { id:a.id, username:a.username, role:a.role, note:a.note||'', memo:a.memo||null,
-    active:!!a.active, createdAt:a.createdAt||null, updatedAt:a.updatedAt||null };
+    active:!!a.active, working:!!a.working, createdAt:a.createdAt||null, updatedAt:a.updatedAt||null };
 }
 function assertStorage() {
   if (!ready || !storage || !storage.isReady) throw issue(503, 'Хранилище аккаунтов недоступно');
@@ -66,6 +70,25 @@ async function getAcc(id) {
 async function saveAcc(a) {
   a.updatedAt = new Date().toISOString();
   await storage.set(key('account:' + a.id), JSON.stringify(a));
+}
+async function financeOf(account) {
+  // This is intentionally read-only: payment integration must verify and credit funds independently.
+  // An absent verified ledger is zero; no client-supplied amounts can enter this calculation.
+  const raw = await storage.get(key('finance:verified-insurance:' + account.id));
+  const parsed = typeof raw==='string' && /^(?:0|[1-9]\d{0,8})(?:\.\d{1,2})?$/.test(raw) ? Number(raw) : 0;
+  const confirmedInsuranceUSDT = Number.isFinite(parsed) ? Math.max(0, parsed) : 0;
+  const workEligible = confirmedInsuranceUSDT >= MIN_INSURANCE_USDT;
+  return {
+    accountId: account.id,
+    confirmedInsuranceUSDT,
+    minimumInsuranceUSDT: MIN_INSURANCE_USDT,
+    shortfallUSDT: Math.max(0, Math.round((MIN_INSURANCE_USDT-confirmedInsuranceUSDT)*100)/100),
+    workEligible,
+    working: workEligible && !!account.working,
+    verification: raw === null ? 'not_connected' : 'server_verified',
+    autoCreditEnabled: false,
+    note: raw === null ? 'Нет подтверждённого поступления страхового депозита. Автозачисление не подключено.' : 'Баланс по серверному учёту подтверждённых поступлений.'
+  };
 }
 async function allocateMemo() {
   for (let tries=0;tries<50;tries++) {
@@ -170,7 +193,8 @@ async function newSession(account) {
 async function listTraders() {
   const ids=await storage.sMembers(key('trader-ids'));
   const accounts=(await Promise.all(ids.map(getAcc))).filter(Boolean);
-  return accounts.sort((a,b)=>b.createdAt.localeCompare(a.createdAt)).map(toPublic);
+  const sorted=accounts.sort((a,b)=>b.createdAt.localeCompare(a.createdAt));
+  return Promise.all(sorted.map(async a => ({...toPublic(a),finance:await financeOf(a)})));
 }
 function validateMemoChange(a,memo) {
   if(!memoValid(memo))throw issue(400,'Memo: от 6 до 40 символов, латиница, цифры, дефис или _');
@@ -228,6 +252,21 @@ async function handle(req,res) {
       note:'Реквизиты для предварительной проверки. Автозачисление и реальный учёт депозитов пока отключены.'
     },origin);
   }
+  if(req.method==='GET'&&url.pathname==='/v1/trader/finance') {
+    if(account.role!=='trader')throw issue(403,'Доступ только трейдеру');
+    return reply(res,200,{finance:await financeOf(account)},origin);
+  }
+  if(req.method==='POST'&&url.pathname==='/v1/trader/work-status') {
+    if(account.role!=='trader')throw issue(403,'Доступ только трейдеру');
+    const data=await parseBody(req);
+    if(typeof data.working!=='boolean')throw issue(400,'Передайте working=true или false');
+    const finance=await financeOf(account);
+    if(data.working && !finance.workEligible)
+      throw issue(403,'Для начала работы нужен подтверждённый страховой депозит от 500 USDT');
+    account.working=data.working;
+    await saveAcc(account);
+    return reply(res,200,{ok:true,finance:await financeOf(account)},origin);
+  }
   if(req.method==='POST'&&url.pathname==='/v1/auth/logout') {
     await storage.del(key('session:'+tokenHash(token)));
     return reply(res,200,{ok:true},origin);
@@ -244,6 +283,12 @@ async function handle(req,res) {
   if(account.role!=='owner')throw issue(403,'Разрешено только владельцу');
   if(req.method==='GET'&&url.pathname==='/v1/admin/traders') {
     return reply(res,200,{traders:await listTraders(),storageVolatile:true},origin);
+  }
+  const financeRoute=url.pathname.match(/^\/v1\/admin\/traders\/([a-f0-9-]{36})\/finance$/);
+  if(req.method==='GET'&&financeRoute) {
+    const trader=await getAcc(financeRoute[1]);
+    if(!trader||trader.role!=='trader')throw issue(404,'Трейдер не найден');
+    return reply(res,200,{trader:toPublic(trader),finance:await financeOf(trader)},origin);
   }
   if(req.method==='POST'&&url.pathname==='/v1/admin/traders'){
     const data=await parseBody(req);
@@ -264,7 +309,7 @@ async function handle(req,res) {
     if(reservedMemo!=='OK') {await storage.del(nameKey);throw issue(409,'Не получилось зарезервировать Memo');}
     try {
       const trader={id,username,role:'trader',passwordHash:await pwHash(data.password),
-        note,memo,active:true,sessionVersion:1,createdAt:new Date().toISOString()};
+        note,memo,active:true,working:false,sessionVersion:1,createdAt:new Date().toISOString()};
       await saveAcc(trader);
       await storage.sAdd(key('trader-ids'),id);
       return reply(res,201,{trader:toPublic(trader),message:'Трейдер создан; логин и пароль активны. Хранилище временное.'},origin);
