@@ -86,6 +86,7 @@ html:not(.owner-authenticated) .shell{display:none!important}
 .owner-banner{padding:13px;background:#e8f5ff;border:1px solid #cae3fb;border-radius:14px;color:#5178a6;font-size:12px;line-height:1.65;margin-bottom:20px}
 .owner-header-controls{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
 .owner-tab-panel[hidden]{display:none!important}
+@media(max-width:760px){.tabs{flex-wrap:wrap}.tabs button{flex:1 1 30%}}
 @media(max-width:760px){.tabs{width:100%}.tabs button{flex:1;padding:10px;font-size:12px}.owner-grid-form{grid-template-columns:1fr}.owner-grid-form .wide{grid-column:auto}.owner-header-controls{gap:6px}.owner-logout{font-size:11px;padding:8px}.owner-login-card{padding:23px}}
 </style>
 </head>
@@ -110,7 +111,7 @@ html:not(.owner-authenticated) .shell{display:none!important}
 <div class="shell">
   <aside>
     <div class="logo"><span class="mark">O</span><div class="brand">OnlyMatch<small>OWNER · ADMIN</small></div></div>
-    <div><div class="side-title">УПРАВЛЕНИЕ</div><div class="nav"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><rect x="3" y="3" width="18" height="18" rx="3"/><circle cx="9" cy="9" r="2"/><path d="M7 16h10m-3-9h4"/></svg><span>Трейдеры и Memo</span></div></div>
+    <div><div class="side-title">УПРАВЛЕНИЕ</div><div class="nav"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><rect x="3" y="3" width="18" height="18" rx="3"/><circle cx="9" cy="9" r="2"/><path d="M7 16h10m-3-9h4"/></svg><span>Трейдеры, Memo и финансы</span></div></div>
     <div class="side-foot"><strong>Owner · защищённый доступ</strong>Логины и пароли хранятся на сервере. Финансовые балансы OnlyMatch пока демонстрационные.</div>
   </aside>
   <main>
@@ -122,6 +123,7 @@ html:not(.owner-authenticated) .shell{display:none!important}
       <div class="tabs" role="tablist" aria-label="Разделы админки">
         <button type="button" data-tab="add" class="active" role="tab" aria-selected="true">1. Добавить трейдера</button>
         <button type="button" data-tab="memo" role="tab" aria-selected="false">2. Изменить Memo</button>
+        <button type="button" data-tab="finance" role="tab" aria-selected="false">3. Финансы</button>
       </div>
       <section class="card owner-tab-panel" id="tab-add">
         <div class="card-head"><h2>Добавить нового трейдера</h2></div>
@@ -138,6 +140,12 @@ html:not(.owner-authenticated) .shell{display:none!important}
         <p class="description">Memo создаётся автоматически вместе с аккаунтом. Можно назначить своё значение, сбросить пароль или временно отключить вход трейдера. Старые Memo остаются зарезервированными.</p>
         <div class="tablewrap"><table><thead><tr><th>Трейдер</th><th>Заметка</th><th>Memo</th><th>Статус</th><th>Действия</th></tr></thead><tbody id="trader-rows"><tr><td colspan="5" class="empty">Загрузка…</td></tr></tbody></table></div>
         <div class="history" id="admin-memo-history"></div>
+      </section>
+      <section class="card owner-tab-panel" id="tab-finance" hidden>
+        <div class="card-head"><h2>Финансы трейдеров</h2><button class="btn" id="refresh-finance" type="button">Обновить балансы</button></div>
+        <p class="description">Для каждого выданного аккаунта отображается только подтверждённый сервером страховой депозит. Рабочий статус разрешён при сумме от <strong>500 USDT</strong>. Локальные деньги и суммы незавершённых заявок в расчёт не входят.</p>
+        <div class="tablewrap"><table><thead><tr><th>Трейдер</th><th>Memo</th><th>Страховой депозит</th><th>До допуска</th><th>Рабочий статус</th><th>Действия</th></tr></thead><tbody id="finance-rows"><tr><td colspan="6" class="empty">Загрузка…</td></tr></tbody></table></div>
+        <p class="owner-card-note" style="margin-top:15px">Подтверждение депозитов через платёжного провайдера ещё не подключено. До появления подтверждённой записи баланс составляет 0 USDT, работа остаётся заблокированной. Отображаемые суммы нельзя считать независимым доказательством получения средств.</p>
       </section>
       <p class="muted">Авторизация не делает демоверсию платёжной системой. Для пополнений и реальных балансов нужна отдельная защищённая бухгалтерия.</p>
     </div>
@@ -190,12 +198,15 @@ el('owner-logout').onclick=()=>{
 };
 function switchTab(tab){
  activeTab=tab;
- for(const name of ['add','memo']){
+ for(const name of ['add','memo','finance']){
   el('tab-'+name).hidden=name!==tab;
   const button=document.querySelector('[data-tab="'+name+'"]');
   button.classList.toggle('active',name===tab);button.setAttribute('aria-selected',String(name===tab));
  }
- if(tab==='memo')loadTraders().catch(e=>{el('trader-rows').innerHTML='<tr><td class="empty" colspan="5">'+esc(e.message)+'</td></tr>'});
+ if(tab==='memo'||tab==='finance')loadTraders().catch(e=>{
+  const id=tab==='memo'?'trader-rows':'finance-rows',columns=tab==='memo'?5:6;
+  el(id).innerHTML='<tr><td class="empty" colspan="'+columns+'">'+esc(e.message)+'</td></tr>';
+ });
 }
 document.querySelectorAll('[data-tab]').forEach(btn=>btn.onclick=()=>switchTab(btn.dataset.tab));
 el('new-trader-form').onsubmit=async e=>{
@@ -214,11 +225,29 @@ function date(v){return v?new Date(v).toLocaleString('ru-RU',{day:'2-digit',mont
 function drawTraders(){
  const query=el('trader-search').value.trim().toLowerCase();
  const list=traders.filter(t=>[t.username,t.memo,t.note].some(x=>String(x||'').toLowerCase().includes(query)));
- el('trader-rows').innerHTML=list.map(t=>'<tr><td data-label="Трейдер"><div><span class="name">'+esc(t.username)+'</span><span class="user-id">'+esc(t.id)+'</span></div></td><td data-label="Заметка"><span class="owner-card-note">'+esc(t.note||'—')+'</span></td><td data-label="Memo"><code class="code">'+esc(t.memo||'—')+'</code></td><td data-label="Статус"><span class="owner-pill '+(t.active?'':'off')+'">'+(t.active?'Активен':'Отключён')+'</span></td><td data-label="Действия"><div class="tools"><button class="btn" data-edit="'+esc(t.id)+'">Изменить Memo</button><button class="btn" data-password="'+esc(t.id)+'">Пароль</button><button class="btn" data-status="'+esc(t.id)+'">'+(t.active?'Отключить':'Включить')+'</button></div></td></tr>').join('')||'<tr><td colspan="5" class="empty">Трейдеров нет</td></tr>';
+ el('trader-rows').innerHTML=list.map(t=>'<tr><td data-label="Трейдер"><div><span class="name">'+esc(t.username)+'</span><span class="user-id">'+esc(t.id)+'</span></div></td><td data-label="Заметка"><span class="owner-card-note">'+esc(t.note||'—')+'</span></td><td data-label="Memo"><code class="code">'+esc(t.memo||'—')+'</code></td><td data-label="Статус"><span class="owner-pill '+(t.active?'':'off')+'">'+(t.active?'Активен':'Отключён')+'</span></td><td data-label="Действия"><div class="tools"><button class="btn" data-profile="'+esc(t.id)+'">Анкета</button><button class="btn" data-edit="'+esc(t.id)+'">Изменить Memo</button><button class="btn" data-finance="'+esc(t.id)+'">Финансы</button><button class="btn" data-password="'+esc(t.id)+'">Пароль</button><button class="btn" data-status="'+esc(t.id)+'">'+(t.active?'Отключить':'Включить')+'</button></div></td></tr>').join('')||'<tr><td colspan="5" class="empty">Трейдеров нет</td></tr>';
+}
+function drawFinance(){
+ const rows=traders.map(t=>{
+  const f=t.finance||{},insurance=Number(f.confirmedInsuranceUSDT||0),shortfall=Number(f.shortfallUSDT||500);
+  const allowed=!!f.workEligible,working=allowed&&!!f.working;
+  const status=!allowed?'Недостаточно депозита':working?'В работе':'Допущен';
+  return '<tr><td data-label="Трейдер"><strong class="name">'+esc(t.username)+'</strong><span class="user-id">'+esc(t.id)+'</span></td><td data-label="Memo"><code class="code">'+esc(t.memo||'—')+'</code></td><td data-label="Страховой депозит"><strong>'+insurance.toFixed(2)+' USDT</strong></td><td data-label="Не хватает">'+shortfall.toFixed(2)+' USDT</td><td data-label="Рабочий статус"><span class="owner-pill '+(allowed?'':'off')+'">'+status+'</span></td><td data-label="Действия"><button type="button" class="btn" data-finance="'+esc(t.id)+'">Подробнее</button></td></tr>';
+ }).join('');
+ el('finance-rows').innerHTML=rows||'<tr><td colspan="6" class="empty">Трейдеров пока нет</td></tr>';
+}
+function infoDialog(title,body){
+ el('dialog-root').innerHTML='<div class="overlay" data-close-overlay><section class="dialog" role="dialog" aria-modal="true" aria-label="'+esc(title)+'"><div class="dialog-top"><h2>'+esc(title)+'</h2><button type="button" class="x" data-close-dialog>×</button></div>'+body+'<div class="form-actions"><button type="button" class="btn" data-close-dialog>Закрыть</button></div></section></div>';
+}
+async function openFinance(trader){
+ const details=await api('/v1/admin/traders/'+encodeURIComponent(trader.id)+'/finance');
+ const f=details.finance,amount=Number(f.confirmedInsuranceUSDT||0),needed=Number(f.shortfallUSDT||0);
+ infoDialog('Финансы · '+trader.username,
+  '<div class="info-list"><p><strong>Трейдер:</strong> '+esc(trader.username)+'</p><p><strong>Учетная запись:</strong> <code>'+esc(trader.id)+'</code></p><p><strong>Memo:</strong> <code class="code">'+esc(trader.memo||'—')+'</code></p><p><strong>Подтверждённый страховой депозит:</strong> '+amount.toFixed(2)+' USDT</p><p><strong>Минимальный депозит:</strong> 500,00 USDT</p><p><strong>Не хватает:</strong> '+needed.toFixed(2)+' USDT</p><p><strong>Допуск к работе:</strong> '+(f.workEligible?'Разрешён':'Заблокирован')+'</p><p><strong>Сейчас:</strong> '+(f.working?'В работе':'Не в работе')+'</p></div><p class="description">'+esc(f.note||'Автоматическая проверка поступлений не подключена.')+'</p>');
 }
 async function loadTraders(){
  const d=await api('/v1/admin/traders');
- traders=d.traders||[];drawTraders();
+ traders=d.traders||[];drawTraders();drawFinance();
  if(activeTab==='memo'){
   const h=await api('/v1/admin/memo-history');
   const records=h.history||[];
@@ -236,11 +265,15 @@ function dialog(title,body,onSubmit){
  };
 }
 el('trader-rows').onclick=async e=>{
- const t=e.target.closest('[data-edit],[data-password],[data-status]');
+ const t=e.target.closest('[data-edit],[data-password],[data-status],[data-profile],[data-finance]');
  if(!t)return;
- const id=t.dataset.edit||t.dataset.password||t.dataset.status;
+ const id=t.dataset.edit||t.dataset.password||t.dataset.status||t.dataset.profile||t.dataset.finance;
  const trader=traders.find(x=>x.id===id);if(!trader)return;
- if(t.hasAttribute('data-edit')){
+ if(t.hasAttribute('data-profile')){
+  infoDialog('Анкета · '+trader.username,'<p><strong>Логин:</strong> '+esc(trader.username)+'</p><p><strong>ID:</strong> '+esc(trader.id)+'</p><p><strong>Memo:</strong> '+esc(trader.memo||'—')+'</p><p><strong>Заметка:</strong> '+esc(trader.note||'—')+'</p><p><strong>Аккаунт:</strong> '+(trader.active?'Активен':'Отключён')+'</p><p><strong>Создан:</strong> '+date(trader.createdAt)+'</p>');
+ }else if(t.hasAttribute('data-finance')){
+  try{await openFinance(trader)}catch(err){alert(err.message)}
+ }else if(t.hasAttribute('data-edit')){
   dialog('Изменить Memo · '+trader.username,
    '<p class="description">Текущий Memo: <code class="code">'+esc(trader.memo)+'</code></p><label class="owner-field">Новый Memo<input name="memo" minlength="6" maxlength="40" required value="'+esc(trader.memo)+'"></label><label class="owner-field">Причина изменения<input name="reason" maxlength="120" placeholder="Например, индивидуальный Memo"></label>',
    f=>api('/v1/admin/traders/'+id+'/memo','PATCH',{memo:String(f.get('memo')).trim(),reason:String(f.get('reason')).trim()}));
@@ -263,6 +296,8 @@ el('dialog-root').onclick=e=>{
  if(e.target.closest('[data-close-dialog]')||e.target.hasAttribute('data-close-overlay'))el('dialog-root').replaceChildren();
 };
 el('refresh-traders').onclick=()=>loadTraders().catch(e=>alert(e.message));
+el('refresh-finance').onclick=()=>loadTraders().catch(e=>alert(e.message));
+el('finance-rows').onclick=async e=>{const btn=e.target.closest('[data-finance]');if(!btn)return;const trader=traders.find(x=>x.id===btn.dataset.finance);if(!trader)return;try{await openFinance(trader)}catch(err){alert(err.message)}};
 el('trader-search').oninput=drawTraders;
 document.addEventListener('keydown',e=>{if(e.key==='Escape')el('dialog-root').replaceChildren()});
 resume();
