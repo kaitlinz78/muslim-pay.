@@ -88,7 +88,7 @@ input,select,textarea,.date-field input{color:#244164;background:#fff;border:1px
 .rate-box .rapira-caption{display:block;color:#7892b1;font-size:10px;line-height:1.4;margin-top:7px;letter-spacing:0}
 .rate-box a{color:inherit;text-decoration:none}.rate-box a:hover{text-decoration:underline}
 [data-rapira-rate]{font-variant-numeric:tabular-nums}
-.ice-insurance-gate-label{display:block;font-size:10px;line-height:1.4;color:#9c6570;margin:7px 0 3px;padding:0 5px;max-width:100%;overflow-wrap:anywhere}
+.ice-insurance-gate-label{display:block;font-size:11px;font-weight:800;line-height:1.55;color:var(--ui-main,#e12b55)!important;text-shadow:0 0 9px var(--ui-glow,rgba(225,43,85,.12));margin:7px 0 3px;padding:0 5px;max-width:100%;overflow-wrap:anywhere}
 #sidebar-work-switch:disabled + .switch{opacity:.56;cursor:not-allowed;filter:grayscale(.25)}
 [data-toggle="working"]:disabled{opacity:.6;cursor:not-allowed}
 </style>
@@ -277,7 +277,7 @@ let financeReady=false,confirmedFinance=null;
 const MIN_INSURANCE_USDT=500;
 const AUTH_SERVICE='https://ice-pay-auth.onrender.com';
 const canStartWork=()=>financeReady&&!!confirmedFinance?.workEligible;
-const financeGateText=()=>!financeReady?'Проверка страхового депозита…':canStartWork()?'Страховой депозит подтверждён. Работа доступна.':'Для работы нужен подтверждённый страховой депозит 500 USDT. Не хватает '+Number(confirmedFinance?.shortfallUSDT??500).toFixed(2)+' USDT';
+const financeGateText=()=>!financeReady?'Проверка страхового депозита…':canStartWork()?'Страховой депозит подтверждён. Работа доступна.':'Для работы нужен подтверждённый страховой депозит 500 USDT.';
 function syncWorkControls(){
  for(const input of document.querySelectorAll('#sidebar-work-switch,[data-toggle="working"]')){
   input.checked=!!state.working;
