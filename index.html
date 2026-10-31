@@ -866,7 +866,7 @@ const esc=t=>String(t||'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&
 const overlay=document.createElement('div');overlay.className='ice-auth-overlay';overlay.id='ice-auth-overlay';
 overlay.innerHTML='<section class="ice-auth-card"><div class="ice-auth-logo">Only<span>Match</span></div><h1>Вход для трейдеров</h1><p>Войдите в кабинет под индивидуальным логином и паролем, выданными администратором OnlyMatch.</p><form id="ice-trader-login-form"><label for="ice-login">Логин</label><input id="ice-login" name="username" autocomplete="username" autocapitalize="off" required minlength="1" maxlength="64"><label for="ice-password">Пароль</label><input id="ice-password" type="password" name="password" autocomplete="current-password" required><button type="submit">Войти в OnlyMatch</button><div class="ice-auth-error" id="ice-auth-error" role="alert"></div></form><div class="ice-auth-footer">Логин создаётся владельцем в отдельной админке. Финансовые данные кабинета пока сохраняются локально в браузере.</div></section>';
 document.body.append(overlay);
-const error=message=>{get('ice-auth-error').textContent=String(message||'Ошибка авторизации')};
+const error=message=>{get('ice-auth-error').textContent=message==null?'':String(message)};
 async function api(path,opts={}){
  const ctl=new AbortController(),timer=setTimeout(()=>ctl.abort(),16000);
  try{
