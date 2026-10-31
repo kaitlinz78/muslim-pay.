@@ -566,7 +566,7 @@ el('trader-rows').onclick=async e=>{
 };
 el('owner-password-btn').onclick=()=>{
  dialog('Сменить пароль Owner',
- '<label class="owner-field">Текущий пароль<input name="current" type="password" required autocomplete="current-password"></label><label class="owner-field">Новый пароль Owner<input name="next" type="password" minlength="12" required autocomplete="new-password"></label>',
+ '<label class="owner-field">Текущий пароль<input name="current" type="password" required autocomplete="current-password"></label><label class="owner-field">Новый пароль Owner<input name="next" type="password" minlength="1" required autocomplete="new-password"></label>',
  async f=>{await api('/v1/auth/change-password','POST',{currentPassword:f.get('current'),newPassword:f.get('next')});sessionStorage.removeItem(TOKEN);location.reload()});
 };
 el('dialog-root').onclick=e=>{
