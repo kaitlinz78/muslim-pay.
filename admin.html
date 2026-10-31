@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="theme-color" content="#f3f8ff">
 <link rel="icon" href="data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%2064%2064%22%3E%3Cdefs%3E%3ClinearGradient%20id%3D%22g%22%20x1%3D%220%22%20y1%3D%220%22%20x2%3D%221%22%20y2%3D%221%22%3E%3Cstop%20stop-color%3D%22%2352beff%22%2F%3E%3Cstop%20offset%3D%221%22%20stop-color%3D%22%232f57d3%22%2F%3E%3C%2FlinearGradient%3E%3C%2Fdefs%3E%3Crect%20width%3D%2264%22%20height%3D%2264%22%20rx%3D%2217%22%20fill%3D%22url(%23g)%22%2F%3E%3Ctext%20x%3D%2232%22%20y%3D%2240%22%20text-anchor%3D%22middle%22%20font-family%3D%22Arial%2Csans-serif%22%20font-size%3D%2223%22%20font-weight%3D%22800%22%20letter-spacing%3D%22-2%22%20fill%3D%22%23fff%22%3EOM%3C%2Ftext%3E%3C%2Fsvg%3E" type="image/svg+xml">
-<title>OnlyMatch Owner — Пользователи и TON Memo</title>
+<title>OnlyMatch Owner — Центр управления</title>
 <meta name="description" content="Отдельная демонстрационная админ-панель OnlyMatch для управления TON Memo">
 <meta name="robots" content="noindex,nofollow,noarchive">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -89,6 +89,79 @@ html:not(.owner-authenticated) .shell{display:none!important}
 @media(max-width:760px){.tabs{flex-wrap:wrap}.tabs button{flex:1 1 30%}}
 @media(max-width:760px){.tabs{width:100%}.tabs button{flex:1;padding:10px;font-size:12px}.owner-grid-form{grid-template-columns:1fr}.owner-grid-form .wide{grid-column:auto}.owner-header-controls{gap:6px}.owner-logout{font-size:11px;padding:8px}.owner-login-card{padding:23px}}
 </style>
+<style id="onlymatch-control-center">
+/* OnlyMatch Owner Control Center */
+:root{--om-accent:#2563eb;--om-accent-soft:#e7f1ff;--om-accent-border:#c8dcfc;--om-side-grad:linear-gradient(160deg,#e6f2ff,#f5f9ff 65%,#e7f1ff)}
+body{background:#f3f8ff}
+.shell{grid-template-columns:264px minmax(0,1fr)}
+aside{background:var(--om-side-grad);padding:19px 12px;gap:14px;position:sticky;top:0;height:100dvh;overflow-y:auto;scrollbar-width:thin}
+.om-brand-panel{padding:10px 8px 14px;border-bottom:1px solid #d9e6f9}
+.om-brand-panel .logo{padding:0;gap:9px}.om-brand-panel .brand{font-size:18px}.om-brand-panel .brand small{font-size:8px}
+.om-online{display:inline-flex;align-items:center;gap:7px;font-size:10px;color:#6787a5;margin:12px 0 0 48px}
+.om-online>span{background:#2fbd9f;width:7px;height:7px;border-radius:100%;box-shadow:0 0 0 3px #2fbd9f22}
+.om-sidebar-nav{display:flex;flex-direction:column;gap:10px}.om-nav-group{display:grid;gap:3px}
+.om-nav-group .side-title{margin:10px 10px 6px}
+.om-nav-item{display:flex;align-items:center;gap:11px;width:100%;border:1px solid transparent;background:transparent;color:#58789b;padding:11px 12px;border-radius:12px;text-align:left;font-weight:760;font-size:12px;min-height:43px;transition:background .16s,border-color .16s,color .16s;position:relative}
+.om-nav-icon{font:800 17px/1 Manrope,system-ui,sans-serif;color:#7b9dc6;width:24px;text-align:center;flex:0 0 24px}
+.om-nav-tail{margin-left:auto}.om-nav-item:hover{background:#fff9;color:#255a9a}
+.om-nav-item.active{background:#fff;color:var(--om-accent);border-color:var(--om-accent-border);box-shadow:0 4px 13px #2866ac16}
+.om-nav-item.active .om-nav-icon{color:var(--om-accent)}
+aside .side-foot{font-size:10px;line-height:1.7;padding:13px;margin-top:15px}
+.om-top-separator{color:#a1b4cc;margin:0 8px}
+.topbar{height:72px}.page{padding-top:29px}
+.om-page-footer{padding:13px 0;color:#9aadc0;font-size:10px;text-align:center}
+.owner-tab-panel{animation:om-fade .2s ease-out}@keyframes om-fade{from{opacity:.6;transform:translateY(3px)}to{opacity:1;transform:none}}
+.om-kpi-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:13px;margin-bottom:19px}
+.om-kpi{background:linear-gradient(145deg,#fff,#edf6ff);border:1px solid #fff;border-radius:18px;padding:20px 19px;min-width:0;box-shadow:var(--shadow);display:grid;gap:7px}
+.om-kpi>span{font-size:11px;color:#7690ad;font-weight:750}.om-kpi>strong{font-size:clamp(20px,2.2vw,28px);color:var(--om-accent);font-weight:850;letter-spacing:-.04em;overflow-wrap:anywhere}.om-kpi>small{font-size:10px;color:#94a5b8}
+.om-small-kpis{grid-template-columns:repeat(2,minmax(0,1fr))}
+.om-section-grid{display:grid;grid-template-columns:1.2fr 1fr;gap:15px}.om-section-grid .card{min-width:0}
+.om-tag{color:var(--om-accent);background:var(--om-accent-soft);border:1px solid var(--om-accent-border);border-radius:20px;padding:6px 10px;font-weight:800;font-size:10px;white-space:nowrap}
+.om-quick-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+.om-quick{display:flex;align-items:center;gap:11px;background:#f5faff;border:1px solid #e0edfb;border-radius:13px;padding:15px 13px;font-size:12px;font-weight:800;color:#34669e;text-align:left}
+.om-quick:hover{background:var(--om-accent-soft);border-color:var(--om-accent-border)}
+.om-quick strong{display:grid;place-items:center;width:34px;height:34px;background:#e3efff;color:var(--om-accent);border-radius:10px;font-size:20px}
+.om-status-list{display:grid;gap:2px}
+.om-status-list>div{display:flex;align-items:center;justify-content:space-between;gap:10px;border-bottom:1px solid #e8eff9;padding:13px 0;font-size:12px}
+.om-status-list>div:last-child{border:0}.om-status-list span{color:#7992af}.om-status-list strong{font-size:11px;color:#5479a0;text-align:right}
+.om-state-good{color:#169d77!important}.om-state-warn{color:#b88637!important}.om-state-muted{color:#8b9fb2!important}
+.om-audit-list{display:grid;gap:8px}.om-audit-row{display:flex;justify-content:space-between;align-items:center;gap:12px;background:#f7fbff;border:1px solid #e5eff9;border-radius:12px;padding:13px 14px}
+.om-audit-row strong{font-size:12px;color:#315e92}.om-audit-row p{font-size:11px;color:#7f95ae;margin:4px 0 0;line-height:1.5}.om-audit-row time{font-size:10px;color:#9db0c4;white-space:nowrap}
+.om-empty-box{margin-top:15px;background:#f7fbff;border:1px dashed #cadff7;border-radius:16px;padding:26px;line-height:1.8;color:#7991ad;font-size:12px}.om-empty-box strong{color:#35618b;font-size:14px}.om-empty-box p{margin:6px 0 0}
+.om-feature-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;margin-top:15px}
+.om-feature{background:#fff;border:1px solid #e0ebf8;border-radius:14px;padding:18px}.om-feature strong{font-size:12px;color:#346798}.om-feature p{font-size:11px;color:#8097ae;line-height:1.75}
+.om-bars{display:grid;gap:18px}.om-bar-track{width:100%;height:13px;border-radius:50px;background:#e8f0fb;overflow:hidden}
+.om-bar-fill{height:100%;background:linear-gradient(90deg,var(--om-accent),#7ec7ff);border-radius:50px;transition:width .3s}
+.om-bar-caption{display:flex;justify-content:space-between;margin-bottom:8px;font-size:12px;color:#6382a2;font-weight:750}
+.om-theme-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px}.om-theme-option{display:grid;gap:7px;text-align:left;border:2px solid #e0ebf8;background:#fff;border-radius:15px;padding:14px;color:#45698f}
+.om-theme-option strong{font-size:13px}.om-theme-option small{font-size:11px;color:#8b9fb5}.om-theme-option.chosen{border-color:var(--om-accent);box-shadow:0 0 0 3px #4888e31a}
+.om-theme-swatches{height:80px;border-radius:10px;border:1px solid #e3ecf9;padding:10px;display:flex;gap:6px;align-items:flex-end}
+.om-theme-swatches i{width:24%;height:65%;border-radius:5px}.om-theme-swatches i:first-child{height:95%}.om-theme-swatches.ice{background:#f5f9ff}.om-theme-swatches.ice i{background:#c9dffe}.om-theme-swatches.ice i:first-child{background:#2c71e4}
+.om-theme-swatches.violet{background:#f9f5ff}.om-theme-swatches.violet i{background:#decafc}.om-theme-swatches.violet i:first-child{background:#8355d7}
+.om-theme-swatches.graphite{background:#1f2636}.om-theme-swatches.graphite i{background:#505e7b}.om-theme-swatches.graphite i:first-child{background:#6a95e3}
+.om-theme-row{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;margin-top:24px;padding-top:18px;border-top:1px solid #e3edf8;color:#6381a1;font-size:12px;font-weight:750}
+.om-theme-row label{display:flex;gap:9px;align-items:center;cursor:pointer}
+html[data-om-theme="violet"]{--om-accent:#8253d1;--om-accent-soft:#f0e8ff;--om-accent-border:#d7c3f8;--om-side-grad:linear-gradient(160deg,#f1eaff,#faf6ff 67%,#ece5fb)}
+html[data-om-theme="violet"] body{background:#f8f5ff}html[data-om-theme="violet"] .om-kpi>strong{color:#8253d1}
+html[data-om-theme="graphite"]{--om-accent:#9ebcff;--om-accent-soft:#303c56;--om-accent-border:#425773;--om-side-grad:linear-gradient(155deg,#1b263b,#202c44)}
+html[data-om-theme="graphite"] body{background:#151d2c;color:#d4e0f1}
+html[data-om-theme="graphite"] aside{border-color:#344762}html[data-om-theme="graphite"] .brand,html[data-om-theme="graphite"] h1{color:#cce0ff}
+html[data-om-theme="graphite"] .topbar{background:#1b2a42;border-bottom-color:#344762;color:#ddeaff}
+html[data-om-theme="graphite"] .card,html[data-om-theme="graphite"] .metric,html[data-om-theme="graphite"] .om-kpi{background:#25324a;border:1px solid #34465f;color:#dceaff}
+html[data-om-theme="graphite"] .om-nav-item{color:#a4bad6}
+html[data-om-theme="graphite"] .om-nav-item.active{background:#33435e;border-color:#4c6389}
+html[data-om-theme="graphite"] .om-kpi>strong,html[data-om-theme="graphite"] .om-tag{color:#9ebcff}
+html[data-om-theme="graphite"] .om-quick,html[data-om-theme="graphite"] .om-status-list>div,html[data-om-theme="graphite"] .om-audit-row,html[data-om-theme="graphite"] .om-feature,html[data-om-theme="graphite"] .om-empty-box{background:#2a3953;border-color:#40516d}
+html[data-om-theme="graphite"] th{background:#2e405a;color:#b5cbec}
+html[data-om-theme="graphite"] td{background:#26364e;border-color:#344864;color:#d0e0fa}
+html[data-om-theme="graphite"] .tablewrap{border-color:#405475}
+html[data-om-theme="graphite"] input,html[data-om-theme="graphite"] textarea,html[data-om-theme="graphite"] .search{background:#253550;color:#dae9ff;border-color:#496080}
+html[data-om-compact="true"] .card{padding:16px;margin-bottom:12px}
+html[data-om-compact="true"] td{padding:10px}
+html[data-om-compact="true"] .om-kpi{padding:13px}
+@media(max-width:1050px){.shell{grid-template-columns:223px minmax(0,1fr)}.om-kpi-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.om-section-grid{grid-template-columns:1fr}.om-theme-grid{gap:9px}}
+@media(max-width:760px){.shell{display:block}aside{position:relative;height:auto;overflow:visible;display:block;padding:10px;border-bottom:1px solid #d5e5fa}.om-brand-panel{padding:7px 8px;border-bottom:0}.om-online,.side-foot{display:none!important}.om-sidebar-nav{flex-direction:row;gap:6px;overflow-x:auto;scrollbar-width:thin;padding:8px 1px;display:flex}.om-nav-group{display:flex;flex:0 0 auto;gap:6px}.om-nav-group .side-title{display:none}.om-nav-item{width:auto;white-space:nowrap;min-height:39px;padding:8px 10px;font-size:11px}.om-nav-icon{font-size:14px;width:18px;flex-basis:18px}.topbar{height:62px}.om-kpi-grid{gap:9px}.om-kpi{padding:14px}.om-quick-grid{grid-template-columns:1fr 1fr}.om-feature-grid,.om-theme-grid{grid-template-columns:1fr}.om-theme-swatches{height:56px}.om-audit-row{align-items:flex-start}.om-theme-option{grid-template-columns:80px 1fr;align-items:center}.om-theme-option small{grid-column:2}.om-theme-swatches{grid-row:1/3}.om-page-footer{margin:12px 0}.page{padding:19px 13px}}
+</style>
 </head>
 
 <body>
@@ -105,26 +178,43 @@ html:not(.owner-authenticated) .shell{display:none!important}
       <button class="btn primary" type="submit">Войти в админку</button>
     </form>
     <div id="owner-login-error" class="owner-login-error" role="alert"></div>
-    <p>Создание логинов, паролей и Memo работает после подключения серверной базы данных.</p>
+    <p>Доступ к управлению трейдерами, финансами и настройками — только для Owner.</p>
   </div>
 </div>
 <div class="shell">
   <aside>
-    <div class="logo"><span class="mark">O</span><div class="brand">OnlyMatch<small>OWNER · ADMIN</small></div></div>
-    <div><div class="side-title">УПРАВЛЕНИЕ</div><div class="nav"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><rect x="3" y="3" width="18" height="18" rx="3"/><circle cx="9" cy="9" r="2"/><path d="M7 16h10m-3-9h4"/></svg><span>Трейдеры, Memo и финансы</span></div></div>
-    <div class="side-foot"><strong>Owner · защищённый доступ</strong>Логины и пароли хранятся на сервере. Финансовые балансы OnlyMatch пока демонстрационные.</div>
+    <div class="om-brand-panel"><div class="logo"><span class="mark">O</span><div class="brand">OnlyMatch<small>OWNER · CONTROL CENTER</small></div></div><span class="om-online"><span></span> Центр управления</span></div>
+<nav class="om-sidebar-nav" aria-label="Управление OnlyMatch">
+<div class="om-nav-group"><div class="side-title">РАБОЧИЙ СТОЛ</div>
+<button class="om-nav-item active" data-tab="overview" type="button"><span class="om-nav-icon">▦</span>Обзор <span class="om-nav-tail">›</span></button>
+<button class="om-nav-item" data-tab="activity" type="button"><span class="om-nav-icon">◷</span>Лента событий</button></div>
+<div class="om-nav-group"><div class="side-title">ТРЕЙДЕРЫ</div>
+<button class="om-nav-item" data-tab="traders" type="button"><span class="om-nav-icon">♙</span>Все трейдеры</button>
+<button class="om-nav-item" data-tab="add" type="button"><span class="om-nav-icon">＋</span>Добавить трейдера</button>
+<button class="om-nav-item" data-tab="memo" type="button"><span class="om-nav-icon">≡</span>Управление Memo</button>
+<button class="om-nav-item" data-tab="finance" type="button"><span class="om-nav-icon">◈</span>Финансы и депозиты</button></div>
+<div class="om-nav-group"><div class="side-title">ПРОЦЕССИНГ</div>
+<button class="om-nav-item" data-tab="payin" type="button"><span class="om-nav-icon">↓</span>Pay-In</button>
+<button class="om-nav-item" data-tab="payout" type="button"><span class="om-nav-icon">↑</span>Pay-Out</button>
+<button class="om-nav-item" data-tab="requisites" type="button"><span class="om-nav-icon">▤</span>Реквизиты</button>
+<button class="om-nav-item" data-tab="disputes" type="button"><span class="om-nav-icon">⚑</span>Апелляции</button>
+<button class="om-nav-item" data-tab="analytics" type="button"><span class="om-nav-icon">▥</span>Аналитика</button></div>
+<div class="om-nav-group"><div class="side-title">НАСТРОЙКИ И КОНТРОЛЬ</div>
+<button class="om-nav-item" data-tab="limits" type="button"><span class="om-nav-icon">☷</span>Лимиты и комиссии</button>
+<button class="om-nav-item" data-tab="appearance" type="button"><span class="om-nav-icon">◉</span>Темы оформления</button>
+<button class="om-nav-item" data-tab="staff" type="button"><span class="om-nav-icon">♧</span>Сотрудники и роли</button>
+<button class="om-nav-item" data-tab="integrations" type="button"><span class="om-nav-icon">⛓</span>Интеграции</button>
+<button class="om-nav-item" data-tab="security" type="button"><span class="om-nav-icon">◇</span>Безопасность</button></div>
+</nav>
+<div class="side-foot"><strong>Owner · защищённый доступ</strong>Серверные логины и Memo управляются здесь. Реальные платежи требуют отдельного платёжного ядра.</div>
   </aside>
   <main>
-    <header class="topbar"><div class="top-title">OnlyMatch / Управление трейдерами</div><div class="owner-header-controls"><span class="role" id="owner-identity">OWNER</span><button id="owner-password-btn" class="owner-logout" type="button">Сменить пароль</button><button class="owner-logout" id="owner-logout" type="button">Выйти</button></div></header>
+    <header class="topbar"><div class="top-title">OnlyMatch <span class="om-top-separator">/</span> <span id="om-top-section">Обзор платформы</span></div><div class="owner-header-controls"><span class="role" id="owner-identity">OWNER</span><button id="owner-password-btn" class="owner-logout" type="button">Сменить пароль</button><button class="owner-logout" id="owner-logout" type="button">Выйти</button></div></header>
     <div class="page">
-      <h1>Управление трейдерами</h1>
-      <p class="subtitle">Отдельная админ-панель OnlyMatch Owner</p><div class="rule"></div>
+      <h1 id="om-page-title">Обзор платформы</h1>
+      <p class="subtitle" id="om-page-subtitle">Показатели, трейдеры, операции и управление площадкой</p><div class="rule"></div>
       <div class="owner-banner"><strong>Серверные аккаунты и токены доступа.</strong> Owner создаёт трейдерам индивидуальные логины и пароли. После входа трейдер получает ограниченный по времени токен сессии. Реальные платежи и денежный баланс здесь не подключены.</div><div class="alert" role="status"><strong>Временное хранилище для проверки входа</strong>На бесплатном хранилище Render аккаунты и Memo могут исчезнуть при его перезапуске. Пока не создавайте постоянные учётные записи для реальных клиентов. Перед запуском потребуется PostgreSQL с постоянным хранением.</div>
-      <div class="tabs" role="tablist" aria-label="Разделы админки">
-        <button type="button" data-tab="add" class="active" role="tab" aria-selected="true">1. Добавить трейдера</button>
-        <button type="button" data-tab="memo" role="tab" aria-selected="false">2. Изменить Memo</button>
-        <button type="button" data-tab="finance" role="tab" aria-selected="false">3. Финансы</button>
-      </div>
+      
       <section class="card owner-tab-panel" id="tab-add">
         <div class="card-head"><h2>Добавить нового трейдера</h2></div>
         <p class="description">Укажи индивидуальные данные для входа на <a href="https://muslim-pay.onrender.com" target="_blank" rel="noopener noreferrer">сайт OnlyMatch</a>. После создания трейдер сможет войти с указанным логином и паролем.</p>
@@ -147,7 +237,113 @@ html:not(.owner-authenticated) .shell{display:none!important}
         <div class="tablewrap"><table><thead><tr><th>Трейдер</th><th>Memo</th><th>Страховой депозит</th><th>До допуска</th><th>Рабочий статус</th><th>Действия</th></tr></thead><tbody id="finance-rows"><tr><td colspan="6" class="empty">Загрузка…</td></tr></tbody></table></div>
         <p class="owner-card-note" style="margin-top:15px">Подтверждение депозитов через платёжного провайдера ещё не подключено. До появления подтверждённой записи баланс составляет 0 USDT, работа остаётся заблокированной. Отображаемые суммы нельзя считать независимым доказательством получения средств.</p>
       </section>
-      <p class="muted">Авторизация не делает демоверсию платёжной системой. Для пополнений и реальных балансов нужна отдельная защищённая бухгалтерия.</p>
+      
+<section class="owner-tab-panel" id="tab-overview">
+  <div class="om-kpi-grid">
+    <div class="om-kpi"><span>Всего трейдеров</span><strong id="om-count-traders">—</strong><small>Зарегистрированные аккаунты</small></div>
+    <div class="om-kpi"><span>Активные аккаунты</span><strong id="om-count-active">—</strong><small>Доступ к личному кабинету</small></div>
+    <div class="om-kpi"><span>Персональные Memo</span><strong id="om-count-memos">—</strong><small>Назначены сервером</small></div>
+    <div class="om-kpi"><span>Подтверждённый страховой депозит</span><strong id="om-count-insurance">—</strong><small>USDT · без начислений вручную</small></div>
+  </div>
+  <div class="om-section-grid">
+    <section class="card"><div class="card-head"><h2>Быстрое управление</h2><span class="om-tag">Owner</span></div>
+      <div class="om-quick-grid">
+        <button class="om-quick" type="button" data-quick-tab="add"><strong>＋</strong><span>Создать трейдера</span></button>
+        <button class="om-quick" type="button" data-quick-tab="memo"><strong>≡</strong><span>Изменить Memo</span></button>
+        <button class="om-quick" type="button" data-quick-tab="finance"><strong>◈</strong><span>Финансы</span></button>
+        <button class="om-quick" type="button" data-quick-tab="limits"><strong>☷</strong><span>Лимиты</span></button>
+      </div>
+    </section>
+    <section class="card"><div class="card-head"><h2>Состояние платформы</h2></div>
+      <div class="om-status-list"><div><span>Авторизация трейдеров</span><strong class="om-state-good">Серверная</strong></div>
+        <div><span>База аккаунтов</span><strong class="om-state-warn">Временное хранение</strong></div>
+        <div><span>Платёжный реестр</span><strong class="om-state-muted">Не подключён</strong></div>
+        <div><span>Автоматические выплаты</span><strong class="om-state-muted">Не подключены</strong></div></div>
+    </section>
+  </div>
+  <section class="card"><div class="card-head"><h2>Последние действия Owner</h2><button class="btn" type="button" data-quick-tab="activity">Вся история</button></div><div id="om-recent-audit" class="om-audit-list"><div class="empty">Загрузка…</div></div></section>
+</section>
+<section class="card owner-tab-panel" id="tab-traders" hidden>
+  <div class="card-head"><h2>Аккаунты трейдеров</h2><div class="actions"><input id="om-directory-search" class="search" placeholder="Логин, ID, заметка" aria-label="Поиск трейдеров"><button class="btn primary" data-quick-tab="add" type="button">+ Новый трейдер</button><button class="btn" id="om-export-traders" type="button">Экспорт CSV</button></div></div>
+  <p class="description">Управление аккаунтами: просмотр анкеты, смена пароля, блокировка или восстановление доступа, переход к Memo и финансам.</p>
+  <div class="tablewrap"><table><thead><tr><th>Трейдер</th><th>Заметка</th><th>Memo</th><th>Доступ</th><th>Действия</th></tr></thead><tbody id="om-directory-rows"><tr><td colspan="5" class="empty">Загрузка…</td></tr></tbody></table></div>
+</section>
+<section class="card owner-tab-panel" id="tab-payin" hidden>
+  <div class="card-head"><h2>Pay-In · входящие операции</h2><span class="om-tag">Контроль заявок</span></div>
+  <div class="om-kpi-grid om-small-kpis"><div class="om-kpi"><span>Платежи от провайдера</span><strong>—</strong><small>Источник не подключён</small></div><div class="om-kpi"><span>Подтверждённые входящие</span><strong>—</strong><small>Нет серверного журнала</small></div></div>
+  <div class="om-empty-box"><strong>Нет подключённого потока Pay-In</strong><p>Для реальных заявок потребуются платёжный провайдер, проверка подписей webhook, идемпотентность, маршрутизация на реквизиты и история событий. Данные локального кабинета трейдера здесь не выдаются за платежи.</p></div>
+</section>
+<section class="card owner-tab-panel" id="tab-payout" hidden>
+  <div class="card-head"><h2>Pay-Out · заявки и выплаты</h2><span class="om-tag">Контроль выплат</span></div>
+  <div class="om-empty-box"><strong>Выплаты провайдера пока не синхронизируются</strong><p>Подготовлены отдельные рабочие разделы для очереди, назначения исполнителей, проверки реквизитов, двухэтапного подтверждения и сверки статусов. Реальный вывод и журнал подтверждений отсутствуют; ничего не будет отмечено выплаченным без платёжного события.</p></div>
+</section>
+<section class="card owner-tab-panel" id="tab-requisites" hidden>
+  <div class="card-head"><h2>Реквизиты и маршрутизация</h2><span class="om-tag">Приём платежей</span></div>
+  <div class="om-feature-grid">
+    <div class="om-feature"><strong>Банковские реквизиты</strong><p>Владелец, банк, способ СБП/карта, страна, статус, дневной объём и проверка принадлежности</p></div>
+    <div class="om-feature"><strong>Распределение трафика</strong><p>Лимиты на реквизит, занятость, приоритет и блокировки по риску</p></div>
+    <div class="om-feature"><strong>Сверка поступлений</strong><p>Получение событий от провайдера, защита от дублей и аудит изменений реквизитов</p></div>
+  </div>
+  <div class="om-empty-box"><strong>Серверный справочник реквизитов пока не подключён</strong><p>Реквизиты из браузеров трейдеров здесь намеренно не отображаются как общая база.</p></div>
+</section>
+<section class="card owner-tab-panel" id="tab-disputes" hidden>
+  <div class="card-head"><h2>Апелляции и спорные операции</h2><span class="om-tag">Поддержка</span></div>
+  <div class="om-feature-grid"><div class="om-feature"><strong>Открытые обращения</strong><p>Привязка к заявке и трейдеру</p></div><div class="om-feature"><strong>Доказательства</strong><p>Файлы, чек и события платежа</p></div><div class="om-feature"><strong>Решение</strong><p>Причина, исполнитель, сроки и журнал</p></div></div>
+  <div class="om-empty-box"><strong>Общий реестр апелляций отсутствует</strong><p>Чтобы принимать и разрешать настоящие споры, нужно хранить обращения на сервере и связать их с платёжными заявками.</p></div>
+</section>
+<section class="owner-tab-panel" id="tab-analytics" hidden>
+  <div class="om-kpi-grid"><div class="om-kpi"><span>Трейдеры</span><strong id="om-analytics-users">—</strong><small>Данные аккаунтов</small></div><div class="om-kpi"><span>С активным доступом</span><strong id="om-analytics-active">—</strong><small>Доступ разрешён Owner</small></div><div class="om-kpi"><span>Подтверждённые депозиты</span><strong id="om-analytics-insurance">—</strong><small>USDT</small></div><div class="om-kpi"><span>Оборот Pay-In / Pay-Out</span><strong>—</strong><small>Платёжный журнал не подключён</small></div></div>
+  <section class="card"><div class="card-head"><h2>Структура аккаунтов</h2><button class="btn" type="button" data-quick-tab="traders">Открыть список</button></div><div id="om-account-chart" class="om-bars"></div></section>
+</section>
+<section class="card owner-tab-panel" id="tab-limits" hidden>
+  <div class="card-head"><h2>Лимиты и комиссии</h2><span class="om-tag">Параметры Owner</span></div>
+  <p class="description">Рабочая форма подготовки конфигурации. Значения сохраняются только в браузере владельца и пока не изменяют расчёт заявок, курсы или финансы трейдеров.</p>
+  <form id="om-limits-form" class="owner-grid-form">
+    <label class="owner-field">Лимит одной заявки Pay-In, RUB<input type="number" name="payinMax" min="1" max="100000000" step="1" required></label>
+    <label class="owner-field">Лимит одной заявки Pay-Out, RUB<input type="number" name="payoutMax" min="1" max="100000000" step="1" required></label>
+    <label class="owner-field">Комиссия Pay-In, %<input type="number" name="payinFee" min="0" max="100" step="0.01" required></label>
+    <label class="owner-field">Комиссия Pay-Out, %<input type="number" name="payoutFee" min="0" max="100" step="0.01" required></label>
+    <label class="owner-field wide">Заметка по лимитам<textarea name="note" maxlength="500" rows="3" placeholder="Примечание для владельца"></textarea></label>
+    <div class="owner-form-footer wide"><button type="submit" class="btn primary">Сохранить локальные параметры</button><span class="owner-message" id="om-limits-message"></span></div>
+  </form>
+</section>
+<section class="card owner-tab-panel" id="tab-appearance" hidden>
+  <div class="card-head"><h2>Темы оформления админки</h2><span class="om-tag">Внешний вид</span></div>
+  <p class="description">Настрой оформление панели Owner. Применяется сразу и сохраняется для этого браузера. Сайт трейдеров не изменяется.</p>
+  <div class="om-theme-grid">
+    <button class="om-theme-option" data-theme-choice="ice" type="button"><span class="om-theme-swatches ice"><i></i><i></i><i></i></span><strong>Ice Blue</strong><small>Светлый синий</small></button>
+    <button class="om-theme-option" data-theme-choice="violet" type="button"><span class="om-theme-swatches violet"><i></i><i></i><i></i></span><strong>Violet Chrome</strong><small>Фиолетовые акценты</small></button>
+    <button class="om-theme-option" data-theme-choice="graphite" type="button"><span class="om-theme-swatches graphite"><i></i><i></i><i></i></span><strong>Graphite</strong><small>Тёмная панель</small></button>
+  </div>
+  <div class="om-theme-row"><label><input type="checkbox" id="om-compact-toggle"> Компактные таблицы и карточки</label><button class="btn" id="om-theme-reset" type="button">Сбросить оформление</button></div>
+</section>
+<section class="card owner-tab-panel" id="tab-staff" hidden>
+  <div class="card-head"><h2>Сотрудники и роли</h2><span class="om-tag">Контроль доступа</span></div>
+  <div class="om-feature-grid"><div class="om-feature"><strong>Owner</strong><p>Настройки, аккаунты и административные действия</p></div><div class="om-feature"><strong>Support</strong><p>Ограниченный доступ к обращениям и заявкам после подключения серверных ролей</p></div><div class="om-feature"><strong>Оператор</strong><p>Выполнение назначенных заявок, без управления ключами и настройками</p></div></div>
+  <div class="om-empty-box"><strong>Пока доступна только роль Owner</strong><p>Создавать сотрудников без серверного разделения прав нельзя. Выдача доступа через общий пароль Owner не рекомендуется.</p></div>
+</section>
+<section class="card owner-tab-panel" id="tab-integrations" hidden>
+  <div class="card-head"><h2>Интеграции и инфраструктура</h2><button class="btn" id="om-check-system" type="button">Проверить систему</button></div>
+  <div class="om-status-list om-integration-list">
+    <div><span>Сервис аккаунтов и сессий</span><strong id="om-api-status">Проверяем…</strong></div>
+    <div><span>Хранилище аккаунтов</span><strong id="om-db-status">Проверяем…</strong></div>
+    <div><span>Проверка TON / TRC20</span><strong>Только просмотр и проверка</strong></div>
+    <div><span>Платёжный провайдер / webhooks</span><strong>Не подключён</strong></div>
+    <div><span>Книга учёта денежных средств</span><strong>Не подключена</strong></div>
+  </div>
+  <div class="om-feature-grid" style="margin-top:20px"><div class="om-feature"><strong>API</strong><p>Проверка подписи сообщений и журнал ошибок</p></div><div class="om-feature"><strong>Мониторинг</strong><p>Отказы, повторные запросы, задержки webhook</p></div><div class="om-feature"><strong>Резервное копирование</strong><p>Постоянная база и регулярные резервные копии перед запуском</p></div></div>
+</section>
+<section class="card owner-tab-panel" id="tab-security" hidden>
+  <div class="card-head"><h2>Безопасность и доступ</h2><span class="om-tag">Owner</span></div>
+  <div class="om-status-list"><div><span>Способ входа</span><strong>Логин + пароль + токен сессии</strong></div><div><span>Права Owner</span><strong>Проверяются сервером</strong></div><div><span>Длительность сессии Owner</span><strong>8 часов</strong></div><div><span>Хранилище логинов</span><strong>Временное, не для продакшена</strong></div></div>
+  <div class="om-quick-grid" style="margin-top:19px"><button class="btn primary" id="om-change-owner-password" type="button">Сменить пароль Owner</button><button class="btn" data-quick-tab="activity" type="button">Журнал действий</button></div>
+</section>
+<section class="card owner-tab-panel" id="tab-activity" hidden>
+  <div class="card-head"><h2>Журнал действий Owner</h2><div class="actions"><button class="btn" id="om-refresh-activity" type="button">Обновить</button><button class="btn" id="om-export-activity" type="button">CSV</button></div></div>
+  <p class="description">Создание трейдеров, смена Memo, блокировка аккаунтов и изменения паролей записываются сервером. История сохраняется во временном хранилище.</p>
+  <div id="om-all-audit" class="om-audit-list"><div class="empty">Загрузка…</div></div>
+</section>
+<div class="om-page-footer">Owner Control Center · Часть модулей будет доступна после подключения постоянного хранилища и платёжного API.</div>
     </div>
   </main>
 </div><div id="dialog-root"></div>
