@@ -1,9 +1,10 @@
-# OnlyMatch
-
-OnlyMatch responsive trading dashboard and owner admin panel. No connection to CRYPTONEX.
-
-## Deployment
-Static website: Render Static Site, branch main, build command `mkdir -p public && cp index.html public/index.html`, publish directory `public`.
-
-## Important
-Demo only. Local sample balances and mock records are not real funds, no payment rails, no live account authorization. For a production payment panel, backend, security, accounting, provider integrations, and compliance need separate implementation.
+# OnlyMatch Automation Android Preview
+Separate test branch. Not integrated with production. Android 8+.
+Notification access is granted manually in Android settings, and monitoring defaults to off.
+You can choose allowed app package names, view local events, generate a demo event,
+and configure an HTTPS server endpoint. No automatic bank payment confirmations.
+Notifications with likely one-time codes and passwords are ignored. No promise of uninterrupted
+24/7 capture; Android can delay or stop background processes.
+Endpoint contract: POST JSON {eventId,sourcePackage,title,text,timestamp,demo} with Bearer token.
+The server must validate the token and deduplicate eventId before accepting events.
+Build with Gradle :app:assembleDebug; debug signed APK is installable for testing.
