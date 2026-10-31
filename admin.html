@@ -161,6 +161,36 @@ html[data-om-compact="true"] td{padding:10px}
 html[data-om-compact="true"] .om-kpi{padding:13px}
 @media(max-width:1050px){.shell{grid-template-columns:223px minmax(0,1fr)}.om-kpi-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.om-section-grid{grid-template-columns:1fr}.om-theme-grid{gap:9px}}
 @media(max-width:760px){.shell{display:block}aside{position:relative;height:auto;overflow:visible;display:block;padding:10px;border-bottom:1px solid #d5e5fa}.om-brand-panel{padding:7px 8px;border-bottom:0}.om-online,.side-foot{display:none!important}.om-sidebar-nav{flex-direction:row;gap:6px;overflow-x:auto;scrollbar-width:thin;padding:8px 1px;display:flex}.om-nav-group{display:flex;flex:0 0 auto;gap:6px}.om-nav-group .side-title{display:none}.om-nav-item{width:auto;white-space:nowrap;min-height:39px;padding:8px 10px;font-size:11px}.om-nav-icon{font-size:14px;width:18px;flex-basis:18px}.topbar{height:62px}.om-kpi-grid{gap:9px}.om-kpi{padding:14px}.om-quick-grid{grid-template-columns:1fr 1fr}.om-feature-grid,.om-theme-grid{grid-template-columns:1fr}.om-theme-swatches{height:56px}.om-audit-row{align-items:flex-start}.om-theme-option{grid-template-columns:80px 1fr;align-items:center}.om-theme-option small{grid-column:2}.om-theme-swatches{grid-row:1/3}.om-page-footer{margin:12px 0}.page{padding:19px 13px}}
+<style id="om-vector-navigation">
+/* Personalised vector icon kit for each navigation item */
+.om-svg-sprite{position:absolute;width:0;height:0;overflow:hidden;pointer-events:none}
+.om-nav-item .om-nav-icon{width:34px;height:34px;flex:0 0 34px;display:grid;place-items:center;border-radius:11px;background:var(--om-icon-bg,#e7f2ff);color:var(--om-icon-color,#4480c7);border:1px solid color-mix(in srgb,var(--om-icon-color,#4480c7) 10%,transparent);transition:transform .16s ease,background .16s ease,color .16s ease}
+.om-nav-icon svg{width:19px;height:19px;display:block;overflow:visible;fill:none;stroke:currentColor}
+.om-nav-item:hover .om-nav-icon{transform:translateY(-1px)}
+.om-nav-item.active .om-nav-icon{color:var(--om-icon-color,#2c71db);background:var(--om-icon-bg,#e1efff);box-shadow:0 2px 9px color-mix(in srgb,var(--om-icon-color,#4480c7) 14%,transparent)}
+.om-nav-item{padding:6px 9px;min-height:49px;gap:10px;font-size:12px;font-weight:760}
+.om-nav-item[data-tab="overview"]{--om-icon-bg:#dfebff;--om-icon-color:#2c71d6}
+.om-nav-item[data-tab="activity"]{--om-icon-bg:#e3f5ff;--om-icon-color:#3488b6}
+.om-nav-item[data-tab="traders"]{--om-icon-bg:#e7f3ff;--om-icon-color:#4877d8}
+.om-nav-item[data-tab="add"]{--om-icon-bg:#e4f9ef;--om-icon-color:#1e9d79}
+.om-nav-item[data-tab="memo"]{--om-icon-bg:#efe8ff;--om-icon-color:#815ed0}
+.om-nav-item[data-tab="finance"]{--om-icon-bg:#e5f4ff;--om-icon-color:#318cb6}
+.om-nav-item[data-tab="payin"]{--om-icon-bg:#e3faed;--om-icon-color:#1d9d77}
+.om-nav-item[data-tab="payout"]{--om-icon-bg:#fff0e6;--om-icon-color:#d4823b}
+.om-nav-item[data-tab="requisites"]{--om-icon-bg:#e9efff;--om-icon-color:#586cd9}
+.om-nav-item[data-tab="disputes"]{--om-icon-bg:#fff0ee;--om-icon-color:#d16e63}
+.om-nav-item[data-tab="analytics"]{--om-icon-bg:#e8f5fc;--om-icon-color:#398fb2}
+.om-nav-item[data-tab="merchants"]{--om-icon-bg:#fff1e2;--om-icon-color:#bd7c2c}
+.om-nav-item[data-tab="limits"]{--om-icon-bg:#edeaff;--om-icon-color:#8661cd}
+.om-nav-item[data-tab="appearance"]{--om-icon-bg:#f7e9ff;--om-icon-color:#b170c9}
+.om-nav-item[data-tab="staff"]{--om-icon-bg:#e8f5ef;--om-icon-color:#469d80}
+.om-nav-item[data-tab="integrations"]{--om-icon-bg:#e6f4ff;--om-icon-color:#3985b8}
+.om-nav-item[data-tab="security"]{--om-icon-bg:#eaf0fa;--om-icon-color:#6b819f}
+html[data-om-theme="graphite"] .om-nav-item .om-nav-icon{background:#2b3e5b;filter:saturate(1.25)}
+html[data-om-theme="graphite"] .om-nav-item.active .om-nav-icon{background:#344b6e}
+.om-merchant-kpis{grid-template-columns:repeat(4,minmax(0,1fr))}
+@media(max-width:760px){.om-nav-item{min-height:41px;padding:5px 8px;gap:6px}.om-nav-item .om-nav-icon{width:29px;height:29px;flex-basis:29px;border-radius:9px}.om-nav-icon svg{width:16px;height:16px}.om-merchant-kpis{grid-template-columns:repeat(2,minmax(0,1fr))}}
+</style>
 </style>
 </head>
 
@@ -184,27 +214,29 @@ html[data-om-compact="true"] .om-kpi{padding:13px}
 <div class="shell">
   <aside>
     <div class="om-brand-panel"><div class="logo"><span class="mark">O</span><div class="brand">OnlyMatch<small>OWNER · CONTROL CENTER</small></div></div><span class="om-online"><span></span> Центр управления</span></div>
+<svg class="om-svg-sprite" aria-hidden="true" xmlns="http://www.w3.org/2000/svg"><defs><symbol id="om-svg-overview" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7" rx="1.6"/><rect x="14" y="3" width="7" height="7" rx="1.6"/><rect x="3" y="14" width="7" height="7" rx="1.6"/><rect x="14" y="14" width="7" height="7" rx="1.6"/></symbol><symbol id="om-svg-activity" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12h4l3-7 4 14 3-7h4"/></symbol><symbol id="om-svg-traders" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="8" r="3"/><path d="M3 20v-2c0-3 2.5-5 6-5s6 2 6 5v2"/><path d="M17 5a3 3 0 0 1 0 6m0 3c2.8 0 4 2 4 4v2"/></symbol><symbol id="om-svg-add" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="8" r="3"/><path d="M3.5 20v-2c0-3 2.5-5 5.5-5 1.8 0 3.3.6 4.2 1.6"/><path d="M18 14v8m-4-4h8"/></symbol><symbol id="om-svg-memo" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="3" width="16" height="18" rx="3"/><path d="M8 8h8m-8 4h8m-8 4h4"/><circle cx="17" cy="16" r="1"/></symbol><symbol id="om-svg-finance" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="6" width="18" height="15" rx="3"/><path d="M3 10h18m-14-7h11"/><rect x="15" y="14" width="4" height="3" rx="1"/></symbol><symbol id="om-svg-payin" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 6v12m-5-5 5 5 5-5"/></symbol><symbol id="om-svg-payout" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 18V6m-5 5 5-5 5 5"/></symbol><symbol id="om-svg-requisites" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="2.5" y="5" width="19" height="14" rx="2.5"/><path d="M2.5 10h19m-15 5h5"/></symbol><symbol id="om-svg-disputes" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3 3.5 7v6c0 5.5 3.5 8 8.5 9 5-1 8.5-3.5 8.5-9V7L12 3Z"/><path d="M12 8v6m0 3h.01"/></symbol><symbol id="om-svg-analytics" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M3 20h18M6 16v-5m6 5V6m6 10V9"/><path d="m4 9 7-5 7 3 3-2"/></symbol><symbol id="om-svg-merchants" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M3 10 5 4h14l2 6"/><path d="M4 10v10h16V10"/><path d="M7 20v-6h5v6"/><path d="M3 10c0 2 4 3 6 0 2 3 4 3 6 0 2 3 6 2 6 0"/></symbol><symbol id="om-svg-limits" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h16M4 17h16"/><circle cx="9" cy="7" r="2.4" fill="var(--om-icon-bg, #fff)"/><circle cx="16" cy="17" r="2.4" fill="var(--om-icon-bg, #fff)"/></symbol><symbol id="om-svg-appearance" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3a9 9 0 1 0 0 18h1c2.5 0 3-2 1.3-3.6-.9-.9.2-2.4 1.5-2.4H18c2.8 0 4-2 3-4.4A9.5 9.5 0 0 0 12 3Z"/><circle cx="7.5" cy="11" r="1"/><circle cx="11" cy="7.5" r="1"/><circle cx="16" cy="8.5" r="1"/></symbol><symbol id="om-svg-staff" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="8" r="3"/><path d="M3 19v-2c0-2.5 2.2-4 6-4h2"/><path d="M18 12 13.5 14v3c0 3 2 4.5 4.5 5 2.5-.5 4.5-2 4.5-5v-3L18 12Z"/><path d="m16 17 1.5 1.5L20 16"/></symbol><symbol id="om-svg-integrations" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="m7 8-3 3 3 3m10-6 3 3-3 3"/><rect x="7.5" y="4" width="9" height="16" rx="3"/><path d="m11 9-1.5 3h3L11 15"/></symbol><symbol id="om-svg-security" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="10" width="14" height="11" rx="2.5"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/><circle cx="12" cy="15" r="1"/></symbol></defs></svg>
 <nav class="om-sidebar-nav" aria-label="Управление OnlyMatch">
 <div class="om-nav-group"><div class="side-title">РАБОЧИЙ СТОЛ</div>
-<button class="om-nav-item active" data-tab="overview" type="button"><span class="om-nav-icon">▦</span>Обзор <span class="om-nav-tail">›</span></button>
-<button class="om-nav-item" data-tab="activity" type="button"><span class="om-nav-icon">◷</span>Лента событий</button></div>
+<button class="om-nav-item active" data-tab="overview" type="button"><span class="om-nav-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><use href="#om-svg-overview"></use></svg></span>Обзор <span class="om-nav-tail">›</span></button>
+<button class="om-nav-item" data-tab="activity" type="button"><span class="om-nav-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><use href="#om-svg-activity"></use></svg></span>Лента событий</button></div>
 <div class="om-nav-group"><div class="side-title">ТРЕЙДЕРЫ</div>
-<button class="om-nav-item" data-tab="traders" type="button"><span class="om-nav-icon">♙</span>Все трейдеры</button>
-<button class="om-nav-item" data-tab="add" type="button"><span class="om-nav-icon">＋</span>Добавить трейдера</button>
-<button class="om-nav-item" data-tab="memo" type="button"><span class="om-nav-icon">≡</span>Управление Memo</button>
-<button class="om-nav-item" data-tab="finance" type="button"><span class="om-nav-icon">◈</span>Финансы и депозиты</button></div>
+<button class="om-nav-item" data-tab="traders" type="button"><span class="om-nav-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><use href="#om-svg-traders"></use></svg></span>Все трейдеры</button>
+<button class="om-nav-item" data-tab="add" type="button"><span class="om-nav-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><use href="#om-svg-add"></use></svg></span>Добавить трейдера</button>
+<button class="om-nav-item" data-tab="memo" type="button"><span class="om-nav-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><use href="#om-svg-memo"></use></svg></span>Управление Memo</button>
+<button class="om-nav-item" data-tab="finance" type="button"><span class="om-nav-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><use href="#om-svg-finance"></use></svg></span>Финансы и депозиты</button></div>
 <div class="om-nav-group"><div class="side-title">ПРОЦЕССИНГ</div>
-<button class="om-nav-item" data-tab="payin" type="button"><span class="om-nav-icon">↓</span>Pay-In</button>
-<button class="om-nav-item" data-tab="payout" type="button"><span class="om-nav-icon">↑</span>Pay-Out</button>
-<button class="om-nav-item" data-tab="requisites" type="button"><span class="om-nav-icon">▤</span>Реквизиты</button>
-<button class="om-nav-item" data-tab="disputes" type="button"><span class="om-nav-icon">⚑</span>Апелляции</button>
-<button class="om-nav-item" data-tab="analytics" type="button"><span class="om-nav-icon">▥</span>Аналитика</button></div>
+<button class="om-nav-item" data-tab="payin" type="button"><span class="om-nav-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><use href="#om-svg-payin"></use></svg></span>Pay-In</button>
+<button class="om-nav-item" data-tab="payout" type="button"><span class="om-nav-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><use href="#om-svg-payout"></use></svg></span>Pay-Out</button>
+<button class="om-nav-item" data-tab="requisites" type="button"><span class="om-nav-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><use href="#om-svg-requisites"></use></svg></span>Реквизиты</button>
+<button class="om-nav-item" data-tab="disputes" type="button"><span class="om-nav-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><use href="#om-svg-disputes"></use></svg></span>Апелляции</button>
+<button class="om-nav-item" data-tab="analytics" type="button"><span class="om-nav-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><use href="#om-svg-analytics"></use></svg></span>Аналитика</button></div>
 <div class="om-nav-group"><div class="side-title">НАСТРОЙКИ И КОНТРОЛЬ</div>
-<button class="om-nav-item" data-tab="limits" type="button"><span class="om-nav-icon">☷</span>Лимиты и комиссии</button>
-<button class="om-nav-item" data-tab="appearance" type="button"><span class="om-nav-icon">◉</span>Темы оформления</button>
-<button class="om-nav-item" data-tab="staff" type="button"><span class="om-nav-icon">♧</span>Сотрудники и роли</button>
-<button class="om-nav-item" data-tab="integrations" type="button"><span class="om-nav-icon">⛓</span>Интеграции</button>
-<button class="om-nav-item" data-tab="security" type="button"><span class="om-nav-icon">◇</span>Безопасность</button></div>
+<button class="om-nav-item" data-tab="merchants" type="button"><span class="om-nav-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><use href="#om-svg-merchants"></use></svg></span>Мерчанты и интеграции</button>
+<button class="om-nav-item" data-tab="limits" type="button"><span class="om-nav-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><use href="#om-svg-limits"></use></svg></span>Лимиты и комиссии</button>
+<button class="om-nav-item" data-tab="appearance" type="button"><span class="om-nav-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><use href="#om-svg-appearance"></use></svg></span>Темы оформления</button>
+<button class="om-nav-item" data-tab="staff" type="button"><span class="om-nav-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><use href="#om-svg-staff"></use></svg></span>Сотрудники и роли</button>
+<button class="om-nav-item" data-tab="integrations" type="button"><span class="om-nav-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><use href="#om-svg-integrations"></use></svg></span>Интеграции</button>
+<button class="om-nav-item" data-tab="security" type="button"><span class="om-nav-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><use href="#om-svg-security"></use></svg></span>Безопасность</button></div>
 </nav>
 <div class="side-foot"><strong>Owner · защищённый доступ</strong>Серверные логины и Memo управляются здесь. Реальные платежи требуют отдельного платёжного ядра.</div>
   </aside>
@@ -298,6 +330,28 @@ html[data-om-compact="true"] .om-kpi{padding:13px}
   <div class="om-kpi-grid"><div class="om-kpi"><span>Трейдеры</span><strong id="om-analytics-users">—</strong><small>Данные аккаунтов</small></div><div class="om-kpi"><span>С активным доступом</span><strong id="om-analytics-active">—</strong><small>Доступ разрешён Owner</small></div><div class="om-kpi"><span>Подтверждённые депозиты</span><strong id="om-analytics-insurance">—</strong><small>USDT</small></div><div class="om-kpi"><span>Оборот Pay-In / Pay-Out</span><strong>—</strong><small>Платёжный журнал не подключён</small></div></div>
   <section class="card"><div class="card-head"><h2>Структура аккаунтов</h2><button class="btn" type="button" data-quick-tab="traders">Открыть список</button></div><div id="om-account-chart" class="om-bars"></div></section>
 </section>
+<section class="owner-tab-panel" id="tab-merchants" hidden>
+  <div class="om-kpi-grid om-merchant-kpis">
+    <div class="om-kpi"><span>Всего мерчантов</span><strong id="om-merchant-total">—</strong><small>Записи Owner</small></div>
+    <div class="om-kpi"><span>Черновики</span><strong id="om-merchant-drafts">—</strong><small>Ожидают подключения</small></div>
+    <div class="om-kpi"><span>Приостановлены</span><strong id="om-merchant-paused">—</strong><small>Статус карточки</small></div>
+    <div class="om-kpi"><span>Подключённые провайдеры</span><strong>0</strong><small>Рабочий API не настроен</small></div>
+  </div>
+  <section class="card">
+    <div class="card-head"><div><h2>Мерчанты</h2><p class="description">Отдельные карточки компаний и партнёров, привязанные к аккаунту Owner.</p></div><div class="actions"><button class="btn" id="om-merchant-refresh" type="button">Обновить</button><button class="btn primary" id="om-merchant-add" type="button">+ Добавить мерчанта</button></div></div>
+    <div class="tablewrap"><table><thead><tr><th>Мерчант</th><th>Сайт</th><th>Дата</th><th>Статус</th><th>Действия</th></tr></thead><tbody id="om-merchant-rows"><tr><td colspan="5" class="empty">Загрузка…</td></tr></tbody></table></div>
+    <p class="description">Данные пока находятся во временном серверном хранилище. Карточка мерчанта не открывает доступ к приёму платежей до фактического подключения провайдера.</p>
+  </section>
+  <section class="card">
+    <div class="card-head"><h2>Интеграции мерчантов</h2><span class="om-tag">Следующий этап</span></div>
+    <div class="om-feature-grid">
+      <div class="om-feature"><strong>Платёжный API</strong><p>Подписание запросов, идентификация мерчантов, лимиты и права по ключам</p></div>
+      <div class="om-feature"><strong>Webhook уведомления</strong><p>Доставка статусов, контроль подписи, очередь повторных доставок</p></div>
+      <div class="om-feature"><strong>Маршрутизация</strong><p>Направления Pay-In / Pay-Out, приоритеты провайдеров, контроль доступных реквизитов</p></div>
+    </div>
+    <div class="om-empty-box"><strong>Платёжные API-ключи пока не выдаются</strong><p>В этом разделе хранятся только карточки мерчантов. Приём и выплата денег, создание API-ключей и доставка webhook будут доступны после подключения защищённого платёжного ядра.</p></div>
+  </section>
+</section>
 <section class="card owner-tab-panel" id="tab-limits" hidden>
   <div class="card-head"><h2>Лимиты и комиссии</h2><span class="om-tag">Параметры Owner</span></div>
   <p class="description">Рабочая форма подготовки конфигурации. Значения сохраняются только в браузере владельца и пока не изменяют расчёт заявок, курсы или финансы трейдеров.</p>
@@ -357,8 +411,8 @@ const API='https://ice-pay-auth.onrender.com',TOKEN='ice-pay-owner-token';
 const el=id=>document.getElementById(id);
 const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 let traders=[],activity=[],deletedRequisites=[],activeTab='overview';
-const TABS=["overview","activity","traders","add","memo","finance","payin","payout","requisites","disputes","analytics","limits","appearance","staff","integrations","security"];
-const TAB_NAMES={"overview":["Обзор платформы","Операционные показатели и управление"],"activity":["Лента событий","Серверный журнал действий Owner"],"traders":["Все трейдеры","Аккаунты, доступ, пароли и профили"],"add":["Добавить трейдера","Создание личного кабинета"],"memo":["Управление Memo","Уникальные идентификаторы TON"],"finance":["Финансы и депозиты","Подтверждённые страховые депозиты"],"payin":["Pay-In","Входящие заявки и маршрутизация"],"payout":["Pay-Out","Очередь выплат и контроль обработки"],"requisites":["Реквизиты","Справочник и распределение платежей"],"disputes":["Апелляции","Работа со спорными операциями"],"analytics":["Аналитика","Показатели аккаунтов и финансов"],"limits":["Лимиты и комиссии","Предварительные параметры конфигурации"],"appearance":["Темы оформления","Настройки внешнего вида Owner"],"staff":["Сотрудники и роли","Разграничение полномочий"],"integrations":["Интеграции","Проверки API и компонентов"],"security":["Безопасность","Пароль Owner и управление доступом"]};
+const TABS=["overview","activity","traders","add","memo","finance","payin","payout","requisites","disputes","analytics","merchants","limits","appearance","staff","integrations","security"];
+const TAB_NAMES={"overview":["Обзор платформы","Операционные показатели и управление"],"activity":["Лента событий","Серверный журнал действий Owner"],"traders":["Все трейдеры","Аккаунты, доступ, пароли и профили"],"add":["Добавить трейдера","Создание личного кабинета"],"memo":["Управление Memo","Уникальные идентификаторы TON"],"finance":["Финансы и депозиты","Подтверждённые страховые депозиты"],"payin":["Pay-In","Входящие заявки и маршрутизация"],"payout":["Pay-Out","Очередь выплат и контроль обработки"],"requisites":["Реквизиты","Справочник и распределение платежей"],"disputes":["Апелляции","Работа со спорными операциями"],"analytics":["Аналитика","Показатели аккаунтов и финансов"],"limits":["Лимиты и комиссии","Предварительные параметры конфигурации"],"appearance":["Темы оформления","Настройки внешнего вида Owner"],"staff":["Сотрудники и роли","Разграничение полномочий"],"integrations":["Интеграции","Проверки API и компонентов"],"security":["Безопасность","Пароль Owner и управление доступом"],"merchants":["Мерчанты и интеграции","Управление партнёрами и подготовка подключений"]};
 async function api(path,method='GET',data){
  const token=sessionStorage.getItem(TOKEN);
  const ctl=new AbortController(),timer=setTimeout(()=>ctl.abort(),18000);
