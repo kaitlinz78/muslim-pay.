@@ -329,6 +329,47 @@ async function handle(req,res) {
     return reply(res,200,{ok:true,reauth:true},origin);
   }
   if(account.role!=='owner')throw issue(403,'Разрешено только владельцу');
+  // Merchant registry: owner-controlled configuration ONLY; no payment processing is enabled.
+  if(req.method==='GET'&&url.pathname==='/v1/admin/merchants') {
+    const ids=await storage.sMembers(key('merchant-ids'));
+    const merchants=(await Promise.all(ids.map(async id=>{
+      const raw=await storage.get(key('merchant:'+id));
+      return raw?JSON.parse(raw):null;
+    }))).filter(Boolean).sort((a,b)=>b.createdAt.localeCompare(a.createdAt));
+    return reply(res,200,{merchants,storageVolatile:true,paymentProcessingEnabled:false},origin);
+  }
+  if(req.method==='POST'&&url.pathname==='/v1/admin/merchants') {
+    const data=await parseBody(req);
+    const name=typeof data.name==='string'?data.name.trim():'';
+    const website=typeof data.website==='string'?data.website.trim():'';
+    const note=typeof data.note==='string'?data.note.trim():'';
+    if(!name||name.length>80||/[\x00-\x1f\x7f]/.test(name))throw issue(400,'Название мерчанта: от 1 до 80 символов');
+    if(note.length>500)throw issue(400,'Заметка: не более 500 символов');
+    if(website && (website.length>255||!/^(https:\/\/)[^\s]+$/i.test(website)))throw issue(400,'Сайт мерчанта должен быть ссылкой HTTPS');
+    const merchant={id:crypto.randomUUID(),name,website,note,status:'draft',createdAt:new Date().toISOString(),updatedAt:new Date().toISOString()};
+    await storage.set(key('merchant:'+merchant.id),JSON.stringify(merchant));
+    await storage.sAdd(key('merchant-ids'),merchant.id);
+    await recordAudit('merchant.created',{id:merchant.id,name});
+    return reply(res,201,{merchant,paymentProcessingEnabled:false},origin);
+  }
+  const merchantRoute=url.pathname.match(/^\/v1\/admin\/merchants\/([a-f0-9-]{36})$/);
+  if(req.method==='PATCH'&&merchantRoute) {
+    const raw=await storage.get(key('merchant:'+merchantRoute[1]));
+    if(!raw)throw issue(404,'Мерчант не найден');
+    const merchant=JSON.parse(raw),data=await parseBody(req);
+    const name=typeof data.name==='string'?data.name.trim():'';
+    const website=typeof data.website==='string'?data.website.trim():'';
+    const note=typeof data.note==='string'?data.note.trim():'';
+    const status=data.status;
+    if(!name||name.length>80||/[\x00-\x1f\x7f]/.test(name))throw issue(400,'Название мерчанта: от 1 до 80 символов');
+    if(note.length>500)throw issue(400,'Заметка: не более 500 символов');
+    if(website && (website.length>255||!/^(https:\/\/)[^\s]+$/i.test(website)))throw issue(400,'Сайт мерчанта должен быть ссылкой HTTPS');
+    if(!['draft','paused'].includes(status))throw issue(400,'Доступны только статусы черновик или приостановлен');
+    Object.assign(merchant,{name,website,note,status,updatedAt:new Date().toISOString()});
+    await storage.set(key('merchant:'+merchant.id),JSON.stringify(merchant));
+    await recordAudit('merchant.updated',{id:merchant.id,name,status});
+    return reply(res,200,{merchant,paymentProcessingEnabled:false},origin);
+  }
   if(req.method==='GET'&&url.pathname==='/v1/admin/activity') {
     const values=await storage.lRange(key('owner-audit'),0,99);
     return reply(res,200,{events:values.map(x=>JSON.parse(x)),storageVolatile:true},origin);
