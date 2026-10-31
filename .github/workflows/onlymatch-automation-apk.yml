@@ -4,6 +4,8 @@ on:
     branches: [onlymatch-automation-preview]
     paths-ignore:
       - 'OnlyMatch-Automation-debug.apk'
+  pull_request:
+    branches: [onlymatch-automation-preview]
   workflow_dispatch:
 jobs:
   android:
@@ -23,6 +25,7 @@ jobs:
           gradle-version: '8.9'
       - run: gradle :app:assembleDebug --no-daemon --stacktrace
       - name: Publish APK to preview branch
+        if: github.event_name == 'push'
         run: |
           cp app/build/outputs/apk/debug/app-debug.apk OnlyMatch-Automation-debug.apk
           git config user.name "github-actions[bot]"
