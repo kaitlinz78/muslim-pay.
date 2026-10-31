@@ -274,6 +274,47 @@ async function handle(req,res) {
     await saveAcc(account);
     return reply(res,200,{ok:true,finance:await financeOf(account)},origin);
   }
+  // A trader can request removal of a locally archived requisite only after
+  // its deletion snapshot has been accepted by the Owner-visible server audit.
+  // Snapshot status is trader-reported because local requisites aren't server-managed.
+  if(req.method==='POST'&&url.pathname==='/v1/trader/requisites/deletions') {
+    if(account.role!=='trader')throw issue(403,'Доступ только трейдеру');
+    const b=await parseBody(req);
+    const r=b?.requisite;
+    if(!r||typeof r!=='object'||Array.isArray(r)||r.status!=='archived')
+      throw issue(400,'Удалять можно только архивные реквизиты');
+    const txt=(v,max)=>typeof v==='string'?v.trim().slice(0,max):'';
+    const id=txt(r.id,80),name=txt(r.name,80),type=txt(r.type,64);
+    if(!/^[A-Za-z0-9_-]{2,80}$/.test(id)||!name||name.length>80||!type)
+      throw issue(400,'Некорректные данные реквизита');
+    let detail=txt(r.detail,100);
+    // Never send or retain a full bank-card PAN in the audit.
+    if(/^(?:[\d\s-]{16,30})$/.test(detail)&&detail.replace(/\D/g,'').length>=16)detail='•••• '+detail.replace(/\D/g,'').slice(-4);
+    const onlySafeAmount=value=>Number.isSafeInteger(value)&&value>=0&&value<=1000000000000?value:null;
+    const entry={
+      auditId:crypto.randomUUID(),requisiteId:id,accountId:account.id,
+      username:account.username, name,type,detail,
+      holder:txt(r.holder,90),createdAt:txt(r.createdAt,36),
+      archivedAt:txt(r.archivedAt,36),
+      minPaymentRub:onlySafeAmount(r.minPaymentRub),
+      maxPaymentRub:onlySafeAmount(r.maxPaymentRub),
+      totalLimitRub:onlySafeAmount(r.totalLimitRub),
+      maxActiveOrders:Number.isSafeInteger(r.maxActiveOrders)&&r.maxActiveOrders>=0&&r.maxActiveOrders<=1000?r.maxActiveOrders:null,
+      deletedAt:new Date().toISOString(),source:'trader_local_archive'
+    };
+    // Store both the detailed record and activity marker in one Redis transaction.
+    // This storage is volatile: production retention needs persistent PostgreSQL.
+    const event={action:'requisite.deleted',actor:account.username,at:entry.deletedAt,
+      details:{username:account.username,requisiteId:id,name,type,detail,
+       holder:entry.holder,totalLimitRub:entry.totalLimitRub,accountId:account.id}};
+    await storage.multi()
+      .lPush(key('requisite-deletion-history'),JSON.stringify(entry))
+      .lTrim(key('requisite-deletion-history'),0,499)
+      .lPush(key('owner-audit'),JSON.stringify(event))
+      .lTrim(key('owner-audit'),0,199)
+      .exec();
+    return reply(res,201,{ok:true,auditId:entry.auditId,deletedAt:entry.deletedAt},origin);
+  }
   if(req.method==='POST'&&url.pathname==='/v1/auth/logout') {
     await storage.del(key('session:'+tokenHash(token)));
     return reply(res,200,{ok:true},origin);
@@ -291,6 +332,10 @@ async function handle(req,res) {
   if(req.method==='GET'&&url.pathname==='/v1/admin/activity') {
     const values=await storage.lRange(key('owner-audit'),0,99);
     return reply(res,200,{events:values.map(x=>JSON.parse(x)),storageVolatile:true},origin);
+  }
+  if(req.method==='GET'&&url.pathname==='/v1/admin/requisite-deletions') {
+    const values=await storage.lRange(key('requisite-deletion-history'),0,199);
+    return reply(res,200,{deletions:values.map(x=>JSON.parse(x)),storageVolatile:true},origin);
   }
   if(req.method==='GET'&&url.pathname==='/v1/admin/overview') {
     const users=await listTraders();
