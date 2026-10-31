@@ -230,6 +230,26 @@ html:not(.ice-auth-ok) #shell{display:none!important}
   cursor:default;
 }
 </style>
+
+<style id="onlymatch-requisite-wizard-css">
+.om-req-steps{display:flex;gap:9px;align-items:center;margin-bottom:17px}
+.om-req-step{flex:1;display:flex;align-items:center;gap:8px;font-weight:800;color:var(--ui-muted,#7790a6);font-size:12px;padding:10px 8px;background:var(--ui-soft,#f1f6fd);border:1px solid var(--ui-border,#dce7f6);border-radius:12px}
+.om-req-step b{display:grid;place-items:center;width:24px;height:24px;flex:none;color:var(--ui-muted,#7390aa);background:var(--ui-card,#fff);border:1px solid var(--ui-border,#dce7f6);border-radius:9px}
+.om-req-step.on{color:var(--ui-main,#bd254c);border-color:var(--ui-main,#bd254c);background:var(--ui-glow,#fdebf0)}
+.om-req-step.on b{background:var(--ui-main,#bd254c);color:var(--ui-onmain,#fff);border-color:var(--ui-main,#bd254c)}
+.om-req-intro{font-size:12px;line-height:1.65;margin:0 0 16px}
+.om-req-error{min-height:18px;font-size:12px;font-weight:700;color:#c34556;margin:4px 0 10px}
+.om-req-hint{display:block;font-size:11px;font-weight:500;line-height:1.55;color:var(--ui-muted,#758ca6);margin-top:3px}
+.om-req-summary{border:1px solid var(--ui-border,#dce7f6);border-radius:12px;background:var(--ui-soft,#f1f6fd);padding:12px 14px;margin-bottom:17px;font-size:12px;line-height:1.7;color:var(--ui-ink,#234264);overflow-wrap:anywhere}
+.om-req-summary strong{display:block;color:var(--ui-main,#bd254c);font-size:13px}
+.om-req-fields{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.om-req-fields .form-field{min-width:0}
+.om-req-fields .om-req-wide{grid-column:1/-1}
+.om-req-note{background:var(--ui-glow,#fce9ee);border:1px solid var(--ui-border,#dce7f6);border-radius:12px;padding:10px 12px;color:var(--ui-ink,#234264);font-size:11px;line-height:1.65;margin-top:10px}
+.om-req-footer{display:flex;align-items:center;justify-content:space-between;gap:9px;flex-wrap:wrap;margin-top:15px}
+.om-req-footer .gradient-button{min-width:145px}
+@media(max-width:440px){.om-req-fields{grid-template-columns:1fr}.om-req-fields .om-req-wide{grid-column:auto}.om-req-step{font-size:11px;padding:8px 6px;gap:5px}.om-req-footer button{flex:1}}
+</style>
 </head>
 <body>
   <div class="shell" id="shell">
@@ -346,7 +366,7 @@ const dateFmt=s=>{try{return new Date(s).toLocaleString(document.documentElement
 function tabBar(name,items){return `<div class="segmented" role="tablist">${items.map(([v,l])=>`<button type="button" role="tab" aria-selected="${(tabs[name]||'all')===v}" class="${(tabs[name]||'all')===v?'active':''}" data-tab="${name}:${v}">${l}</button>`).join('')}</div>`}
 function orderList(which){let q=(searches[which]||'').toLowerCase(), status=tabs[which]||'all';let data=state.orders.filter(x=>which==='all'||x.kind===(which==='payin'?'Pay-In':'Pay-Out'));if(status!=='all')data=data.filter(x=>x.status===status);if(q)data=data.filter(x=>(x.id+' '+x.currency+' '+x.amount).toLowerCase().includes(q));return `<div class="table-wrap"><table class="data-table"><thead><tr><th>№ заявки</th><th>Тип</th><th>Сумма</th><th>Статус</th><th>Создано</th><th>Детали</th></tr></thead><tbody>${data.map(x=>`<tr><td>${esc(x.id)}</td><td>${esc(x.kind)}</td><td><strong>${money(x.amount,0)} ${esc(x.currency)}</strong></td><td>${statusTag(x.status)}</td><td>${dateFmt(x.created)}</td><td><button class="table-link" data-detail="order:${esc(x.id)}">Открыть</button></td></tr>`).join('')||`<tr><td colspan="6" style="text-align:center;color:var(--muted);padding:35px">Нет заявок по заданным фильтрам</td></tr>`}</tbody></table></div>`}
 function transactions(which){return `${title(which==='payin'?'Pay-In':'Pay-Out')}<div class="action-row"><button class="secondary-button" data-export="${which}">${icon('download')} Экспорт CSV</button></div><div class="section-card"><div class="section-header"><h2>История ${which==='payin'?'Pay-In':'Pay-Out'}</h2><span class="volume-small">Всего: ${state.orders.filter(x=>x.kind===(which==='payin'?'Pay-In':'Pay-Out')).length}</span></div><div class="filters">${tabBar(which,[['all','Все'],['pending','Активные'],['success','Успешные'],['expired','Истекшие']])}<input type="search" data-search="${which}" value="${esc(searches[which]||'')}" placeholder="Поиск по номеру и сумме"></div>${orderList(which)}</div>`}
-function requisites(){const active=state.records.filter(r=>r.status==='active').length;let list=state.records.filter(r=>r.status===(tabs.requisites||'active'));let q=(searches.requisites||'').toLowerCase();if(q)list=list.filter(r=>(r.name+' '+r.type+' '+r.detail+' '+r.holder).toLowerCase().includes(q));if(selects.reqtype&&selects.reqtype!=='all')list=list.filter(r=>r.type===selects.reqtype);if(selects.reqstatus&&selects.reqstatus!=='all')list=list.filter(r=>r.status===selects.reqstatus);return `${title('Реквизиты')}<div class="action-row"><button class="gradient-button" data-action="add-requisite">Создать реквизиты</button></div><div class="mini-card-grid"><div class="mini-card"><strong>${state.records.length}</strong><span>Всего реквизитов</span></div><div class="mini-card"><strong>${active}</strong><span>Активных</span></div></div><div class="section-card"><div style="margin-bottom:15px">${tabBar('requisites',[['active','Активные'],['archived','Архив']])}</div><div class="filters"><input data-search="requisites" type="search" placeholder="Поиск по названию, реквизиту, ФИО, банку..." value="${esc(searches.requisites||'')}"><select data-select="reqtype"><option value="all">Все типы</option><option value="🌐 Международная карта" ${selects.reqtype==='🌐 Международная карта'?'selected':''}>Международная карта</option><option value="Банковская карта" ${selects.reqtype==='Банковская карта'?'selected':''}>Банковская карта</option><option value="СБП" ${selects.reqtype==='СБП'?'selected':''}>СБП</option></select><select data-select="reqstatus"><option value="all">Все статусы</option><option value="active" ${selects.reqstatus==='active'?'selected':''}>Активные</option><option value="archived" ${selects.reqstatus==='archived'?'selected':''}>Архивные</option></select></div><div class="table-wrap"><table class="data-table"><thead><tr><th>Название</th><th>Тип</th><th>Данные</th><th>Владелец</th><th>Статус</th><th>Действие</th></tr></thead><tbody>${list.map(r=>`<tr><td><strong>${esc(r.name)}</strong></td><td>${esc(r.type)}</td><td>${esc(r.detail)}</td><td>${esc(r.holder)}</td><td>${statusTag(r.status)}</td><td><button class="table-link" data-detail="req:${esc(r.id)}">Подробнее</button></td></tr>`).join('')||'<tr><td colspan="6" style="padding:35px;text-align:center;color:var(--muted)">Реквизиты не найдены</td></tr>'}</tbody></table></div></div>`}
+function requisites(){const active=state.records.filter(r=>r.status==='active').length;let list=state.records.filter(r=>r.status===(tabs.requisites||'active'));let q=(searches.requisites||'').toLowerCase();if(q)list=list.filter(r=>(r.name+' '+r.type+' '+r.detail+' '+r.holder).toLowerCase().includes(q));if(selects.reqtype&&selects.reqtype!=='all')list=list.filter(r=>r.type===selects.reqtype);if(selects.reqstatus&&selects.reqstatus!=='all')list=list.filter(r=>r.status===selects.reqstatus);return `${title('Реквизиты')}<div class="action-row"><button class="gradient-button" data-action="add-requisite">Создать реквизиты</button></div><div class="mini-card-grid"><div class="mini-card"><strong>${state.records.length}</strong><span>Всего реквизитов</span></div><div class="mini-card"><strong>${active}</strong><span>Активных</span></div></div><div class="section-card"><div style="margin-bottom:15px">${tabBar('requisites',[['active','Активные'],['archived','Архив']])}</div><div class="filters"><input data-search="requisites" type="search" placeholder="Поиск по названию, реквизиту, ФИО, банку..." value="${esc(searches.requisites||'')}"><select data-select="reqtype"><option value="all">Все типы</option><option value="🌐 Международная карта" ${selects.reqtype==='🌐 Международная карта'?'selected':''}>Международная карта</option><option value="Банковская карта" ${selects.reqtype==='Банковская карта'?'selected':''}>Банковская карта</option><option value="СБП" ${selects.reqtype==='СБП'?'selected':''}>СБП</option></select><select data-select="reqstatus"><option value="all">Все статусы</option><option value="active" ${selects.reqstatus==='active'?'selected':''}>Активные</option><option value="archived" ${selects.reqstatus==='archived'?'selected':''}>Архивные</option></select></div><div class="table-wrap"><table class="data-table"><thead><tr><th>Название</th><th>Тип</th><th>Данные</th><th>Владелец</th><th>Статус</th><th>Действие</th></tr></thead><tbody>${list.map(r=>`<tr><td><strong>${esc(r.name)}</strong>${Number.isSafeInteger(r.minPaymentRub)&&Number.isSafeInteger(r.maxPaymentRub)?`<small class="om-req-hint">${money(r.minPaymentRub,0)}–${money(r.maxPaymentRub,0)} ₽ · до ${money(r.maxActiveOrders,0)} активных ордеров</small>`:""}</td><td>${esc(r.type)}</td><td>${esc(r.detail)}</td><td>${esc(r.holder)}</td><td>${statusTag(r.status)}</td><td><button class="table-link" data-detail="req:${esc(r.id)}">Подробнее</button></td></tr>`).join('')||'<tr><td colspan="6" style="padding:35px;text-align:center;color:var(--muted)">Реквизиты не найдены</td></tr>'}</tbody></table></div></div>`}
 function wallet(){return `${title('Финансы')}<div class="wallet-actions"><button class="gradient-button" data-action="deposit">${icon('plus')} Пополнить USDT TRC20</button><button class="gradient-button ice-ton-wallet-btn" type="button" data-ice-ton="open">${icon('wallet')} Пополнить TON</button><button class="gradient-button" data-action="withdraw">Запросить вывод</button></div><div class="ice-ton-wallet-caption">Основной баланс USDT демонстрационный. Страховой депозит отображается только по подтверждённым сервером поступлениям. ${esc(financeGateText())}</div><div class="section-card"><div class="wallet-cards">${[['Основной баланс · TRC20',state.balance],['Доступно',state.balance-state.reserved],['Заблокировано',state.reserved],['Страховой депозит',state.insurance]].map(([label,num])=>`<div class="wallet-tile"><span class="asset-tag">USDT</span><div class="wallet-amount">${money(num)} USDT</div><div class="wallet-caption">${label}</div></div>`).join('')}<div class="wallet-tile"><div class="wallet-amount">${state.walletOps.filter(x=>x.kind==='deposit'&&x.status==='pending').length}</div><div class="wallet-caption">Пополнения в обработке</div></div><div class="wallet-tile"><div class="wallet-amount">${state.walletOps.filter(x=>x.kind==='withdraw'&&x.status==='pending').length}</div><div class="wallet-caption">Выводы в обработке</div></div></div></div><div class="section-card"><div class="section-header"><h2>История кошелька</h2><button class="secondary-button" data-export="wallet">${icon('download')} CSV</button></div>${walletTable()}</div>`}
 function walletTable(){return `<div class="table-wrap"><table class="data-table"><thead><tr><th>Номер</th><th>Операция</th><th>Сумма</th><th>Создана</th><th>Статус</th></tr></thead><tbody>${state.walletOps.map(x=>`<tr><td>${esc(x.id)}</td><td>${x.kind==='deposit'?'Пополнение':'Запрос вывода'}</td><td>${money(x.amount)} USDT</td><td>${dateFmt(x.created)}</td><td>${statusTag(x.status)}</td></tr>`).join('')||'<tr><td colspan="5" style="text-align:center;padding:33px;color:var(--muted)">Операций пока нет</td></tr>'}</tbody></table></div>`}
 function payoutRequests(){return `${title('Запросы Pay-Out')}<div class="action-row"><button class="gradient-button" data-action="new-payout">${icon('plus')} Новый запрос</button></div><div class="section-card"><div class="section-header"><h2>Запросы на выплату</h2><span class="volume-small">История заявок</span></div><div class="filters"><input type="search" data-search="payout" placeholder="Найти заявку" value="${esc(searches.payout||'')}"></div>${orderList('payout')}</div>`}
@@ -367,7 +387,119 @@ function addNotice(title,detail){state.notifications.unshift({id:randId('N'),tit
 function modal(titleText,body,onSubmit){const root=$('#modal-root');root.innerHTML=`<div class="modal-overlay" data-overlay="true"><div class="modal" role="dialog" aria-modal="true" aria-label="${esc(titleText)}"><div class="modal-title-row"><h2>${esc(titleText)}</h2><button class="modal-close" data-modal-close="true" aria-label="Закрыть">×</button></div>${body}</div></div>`;const form=$('form',root);if(form&&onSubmit)form.addEventListener('submit',e=>{e.preventDefault();onSubmit(new FormData(form),form)})}
 const closeModal=()=>$('#modal-root').replaceChildren();
 const modalButtons='<div class="modal-footer"><button type="button" class="secondary-button" data-modal-close="true">Отмена</button><button type="submit" class="gradient-button">Сохранить</button></div>';
-function startAction(action){if(action==='add-requisite'){modal('Создать реквизиты',`<p>Реквизиты сохраняются в этом браузере.</p><form><label class="form-field">Название<input name="name" maxlength="50" placeholder="Название реквизита" required></label><label class="form-field">Тип<select name="type"><option>🌐 Международная карта</option><option>Банковская карта</option><option>СБП</option></select></label><label class="form-field">Маскированный номер или описание<input name="detail" maxlength="48" placeholder="Например, •••• 1234" required></label><label class="form-field">Владелец<input name="holder" maxlength="60" placeholder="ФИО владельца" required></label>${modalButtons}</form>`,data=>{let name=String(data.get('name')).trim(),detail=String(data.get('detail')).trim(),holder=String(data.get('holder')).trim();if(!name||!detail||!holder)return toast('Заполните все поля');state.records.unshift({id:randId('R'),name,type:String(data.get('type')),detail,holder,status:'active'});addNotice('Реквизит добавлен',name);closeModal();refresh();toast('Реквизит добавлен')});return}
+
+// Payment details editor: two steps. This client prototype keeps only masked PAN,
+// never the full card number, in browser storage. No funds or orders are routed here.
+function openRequisiteWizard(){
+ const draft={name:'',type:'Банковская карта',account:'',holder:'',minPaymentRub:'',maxPaymentRub:'',maxActiveOrders:''};
+ const markupSteps=step=>'<div class="om-req-steps" aria-label="Шаги создания реквизита">'+
+  '<div class="om-req-step '+(step===1?'on':'')+'"><b>1</b> Реквизиты</div>'+
+  '<div class="om-req-step '+(step===2?'on':'')+'"><b>2</b> Лимиты</div></div>';
+ const setError=(form,message)=>{let node=form.querySelector('.om-req-error');if(node)node.textContent=message;};
+ const getDigits=value=>String(value||'').replace(/\D/g,'');
+ const tidyCard=value=>getDigits(value).slice(0,19).replace(/(.{4})/g,'$1 ').trim();
+ const tidyPhone=value=>{
+  const digits=getDigits(value);
+  const ten=digits.startsWith('7')?digits.slice(1,11):digits.slice(0,10);
+  return '+7'+ten;
+ };
+ const formatPhone=value=>{
+  const normalized=tidyPhone(value);
+  const numbers=normalized.slice(2);
+  return '+7'+(numbers.length?' '+numbers.slice(0,3):'')+(numbers.length>3?' '+numbers.slice(3,6):'')+(numbers.length>6?'-'+numbers.slice(6,8):'')+(numbers.length>8?'-'+numbers.slice(8,10):'');
+ };
+ function stepOne(){
+  modal('Создать реквизиты',markupSteps(1)+
+   '<p class="om-req-intro">Укажите название, тип и владельца реквизита.</p>'+
+   '<form id="om-req-step-one" autocomplete="off">'+
+   '<label class="form-field">Название реквизитов<input name="name" maxlength="50" placeholder="Например, Основные реквизиты" required value="'+esc(draft.name)+'"></label>'+
+   '<label class="form-field">Тип реквизитов<select name="type" required>'+
+    '<option value="Банковская карта"'+(draft.type==='Банковская карта'?' selected':'')+'>Банковская карта</option>'+
+    '<option value="СБП"'+(draft.type==='СБП'?' selected':'')+'>СБП (номер телефона)</option></select></label>'+
+   '<label class="form-field"><span id="om-req-number-label">Номер банковской карты</span><input name="account" type="text" autocomplete="off" inputmode="numeric" maxlength="25" placeholder="0000 0000 0000 0000" required value="'+esc(draft.account)+'"><small class="om-req-hint" id="om-req-number-hint">Введите от 16 до 19 цифр.</small></label>'+
+   '<label class="form-field">ФИО владельца<input name="holder" type="text" autocomplete="off" maxlength="90" placeholder="Фамилия Имя Отчество" required value="'+esc(draft.holder)+'"><small class="om-req-hint">Укажите как минимум фамилию и имя.</small></label>'+
+   '<p class="om-req-error" role="alert" aria-live="polite"></p>'+
+   '<div class="om-req-footer"><button type="button" class="secondary-button" data-modal-close="true">Отмена</button><button type="submit" class="gradient-button">Продолжить →</button></div>'+
+   '</form>');
+  const form=$('#om-req-step-one'),kind=form.elements.type,account=form.elements.account;
+  function updateKind(changed){
+   const sbp=kind.value==='СБП';
+   $('#om-req-number-label').textContent=sbp?'Номер телефона СБП':'Номер банковской карты';
+   $('#om-req-number-hint').textContent=sbp?'Обязательно +7 и 10 цифр номера.':'Введите от 16 до 19 цифр.';
+   account.placeholder=sbp?'+7 999 123-45-67':'0000 0000 0000 0000';
+   account.inputMode=sbp?'tel':'numeric';
+   account.maxLength=sbp?18:25;
+   if(changed)account.value=sbp?'+7':'';
+   else if(account.value)account.value=sbp?formatPhone(account.value):tidyCard(account.value);
+   else if(sbp)account.value='+7';
+  }
+  kind.addEventListener('change',()=>updateKind(true));
+  account.addEventListener('input',()=>{const old=account.value;account.value=kind.value==='СБП'?formatPhone(old):tidyCard(old)});
+  updateKind(false);
+  form.addEventListener('submit',event=>{
+   event.preventDefault();
+   const name=String(form.elements.name.value||'').trim();
+   const type=kind.value;
+   const raw=String(account.value||'').trim();
+   const holder=String(form.elements.holder.value||'').trim().replace(/\s+/g,' ');
+   if(!name||name.length>50)return setError(form,'Введите название реквизитов.');
+   if(type==='Банковская карта'){
+    if(!/^\d{16,19}$/.test(getDigits(raw)))return setError(form,'Номер карты должен содержать от 16 до 19 цифр.');
+   }else if(type==='СБП'){
+    if(!/^\+7\s*\d{3}\s*\d{3}[-\s]*\d{2}[-\s]*\d{2}$/.test(raw)&&!/^\+7\d{10}$/.test(raw))
+     return setError(form,'Введите номер СБП в формате +7 999 123-45-67.');
+   }else return setError(form,'Выберите банковскую карту или СБП.');
+   if(holder.length<4||holder.split(' ').length<2||holder.length>90)
+    return setError(form,'Введите фамилию и имя владельца.');
+   Object.assign(draft,{name,type,account:type==='СБП'?formatPhone(raw):tidyCard(raw),holder});
+   stepTwo();
+  });
+ }
+ function stepTwo(){
+  const summary=draft.type==='Банковская карта'?'•••• '+getDigits(draft.account).slice(-4):draft.account;
+  modal('Создать реквизиты',markupSteps(2)+
+   '<div class="om-req-summary"><strong>'+esc(draft.name)+'</strong>'+esc(draft.type)+' · '+esc(summary)+'<div>'+esc(draft.holder)+'</div></div>'+
+   '<p class="om-req-intro">Укажите лимиты платежей в рублях и максимальное число одновременно активных ордеров для этого реквизита.</p>'+
+   '<form id="om-req-step-two">'+
+   '<div class="om-req-fields">'+
+    '<label class="form-field">Минимальный платёж, ₽<input type="number" name="minPaymentRub" inputmode="numeric" min="1" max="100000000" step="1" placeholder="Например, 1000" required value="'+esc(draft.minPaymentRub)+'"></label>'+
+    '<label class="form-field">Максимальный платёж, ₽<input type="number" name="maxPaymentRub" inputmode="numeric" min="1" max="100000000" step="1" placeholder="Например, 100000" required value="'+esc(draft.maxPaymentRub)+'"></label>'+
+    '<label class="form-field om-req-wide">Максимальное количество активных ордеров<input type="number" name="maxActiveOrders" inputmode="numeric" min="1" max="1000" step="1" placeholder="Например, 5" required value="'+esc(draft.maxActiveOrders)+'"><small class="om-req-hint">Сколько заявок может находиться в работе одновременно на этих реквизитах.</small></label>'+
+   '</div>'+
+   '<div class="om-req-note">В этой версии лимиты сохраняются в карточке реквизита. Автоматическое распределение платежей и учёт активных ордеров ещё не подключены. Полный номер банковской карты в браузере не сохраняется.</div>'+
+   '<p class="om-req-error" role="alert" aria-live="polite"></p>'+
+   '<div class="om-req-footer"><button type="button" class="secondary-button" id="om-req-back">← Назад</button><button type="submit" class="gradient-button">Создать реквизиты</button></div>'+
+   '</form>');
+  const form=$('#om-req-step-two');
+  form.querySelector('#om-req-back').addEventListener('click',()=>{
+   draft.minPaymentRub=form.elements.minPaymentRub.value;
+   draft.maxPaymentRub=form.elements.maxPaymentRub.value;
+   draft.maxActiveOrders=form.elements.maxActiveOrders.value;
+   stepOne();
+  });
+  form.addEventListener('submit',event=>{
+   event.preventDefault();
+   const min=Number(form.elements.minPaymentRub.value);
+   const max=Number(form.elements.maxPaymentRub.value);
+   const orders=Number(form.elements.maxActiveOrders.value);
+   if(!Number.isSafeInteger(min)||min<1||min>100000000)return setError(form,'Укажите минимальную сумму от 1 до 100 000 000 ₽.');
+   if(!Number.isSafeInteger(max)||max<1||max>100000000)return setError(form,'Укажите максимальную сумму от 1 до 100 000 000 ₽.');
+   if(max<min)return setError(form,'Максимальный лимит не может быть меньше минимального.');
+   if(!Number.isSafeInteger(orders)||orders<1||orders>1000)return setError(form,'Количество активных ордеров — целое число от 1 до 1000.');
+   // Preserve only a masked PAN in localStorage. This is not a payment receiver.
+   const displayNumber=draft.type==='Банковская карта'?'•••• '+getDigits(draft.account).slice(-4):draft.account;
+   state.records.unshift({
+    id:randId('R'),name:draft.name,type:draft.type,detail:displayNumber,holder:draft.holder,
+    minPaymentRub:min,maxPaymentRub:max,maxActiveOrders:orders,status:'active',createdAt:new Date().toISOString()
+   });
+   addNotice('Реквизиты созданы',draft.name);
+   closeModal();refresh();toast('Реквизиты сохранены с лимитами');
+  });
+ }
+ stepOne();
+}
+
+function startAction(action){if(action==='add-requisite'){openRequisiteWizard();return}
 if(['deposit','withdraw'].includes(action)){let deposit=action==='deposit';modal(deposit?'Пополнить баланс':'Запросить вывод',`<div class="info-strip">Заявка сохраняется в браузере. Перевод средств и изменение баланса через эту форму не выполняются.</div><form><label class="form-field">Сумма в USDT<input name="amount" type="number" min="0.01" max="100000" step="0.01" placeholder="0.00" required></label><label class="form-field">Сеть<select name="network"><option>USDT · TRC20</option></select></label>${deposit?'':'<label class="form-field">Адрес получения USDT TRC20<input name="recipient" maxlength="90" placeholder="Адрес TRC20" required></label>'}${modalButtons.replace('Сохранить',deposit?'Создать заявку':'Запросить вывод')}</form>`,data=>{const amount=Number(data.get('amount'));if(!Number.isFinite(amount)||amount<=0||amount>100000)return toast('Проверьте сумму');if(!deposit&&!String(data.get('recipient')||'').trim())return toast('Укажите адрес');let id=randId('W');state.walletOps.unshift({id,kind:action,amount,created:new Date().toISOString(),status:'pending'});addNotice(deposit?'Запрошено пополнение':'Запрошен вывод',`Заявка ${id} на ${money(amount)} USDT`);closeModal();refresh();toast('Заявка сохранена в браузере. Перевод средств не выполнен.')});return}
 if(['new-payin','new-payout'].includes(action)){let kind=action==='new-payin'?'Pay-In':'Pay-Out';modal('Заявка '+kind,`<p>Заявка сохраняется локально, без отправки платежа.</p><form><label class="form-field">Сумма в RUB<input name="amount" type="number" min="1" max="10000000" step="1" placeholder="10000" required></label><label class="form-field">Тип<select name="kind"><option>${kind}</option></select></label>${modalButtons.replace('Сохранить','Создать заявку')}</form>`,data=>{let amount=Number(data.get('amount'));if(!Number.isFinite(amount)||amount<1||amount>1e7)return toast('Некорректная сумма');let id=randId('MP');state.orders.unshift({id,kind,amount,currency:'RUB',status:'pending',created:new Date().toISOString()});addNotice('Новая заявка',`${kind} · ${id}`);closeModal();refresh();toast('Заявка сохранена в браузере')});return}
 if(action==='new-appeal'){modal('Новая апелляция',`<form><label class="form-field">Направление<select name="kind"><option>Pay-In</option><option>Pay-Out</option></select></label><label class="form-field">Причина<input name="reason" maxlength="110" placeholder="Краткое описание спорной операции" required></label>${modalButtons}</form>`,d=>{let reason=String(d.get('reason')).trim();if(!reason)return toast('Укажите причину');state.appeals.unshift({id:randId('A'),kind:String(d.get('kind')),reason,status:'pending'});addNotice('Апелляция создана',reason);closeModal();refresh();toast('Апелляция добавлена')});return}
@@ -376,7 +508,7 @@ if(action==='mark-read'){state.notifications.forEach(n=>n.read=true);refresh();t
 if(action==='reset'){modal('Сбросить данные?',`<p>Удалить сохранённые в этом браузере заявки и реквизиты? Это не затрагивает серверные счета.</p><div class="modal-footer"><button class="secondary-button" data-modal-close="true">Отмена</button><button class="danger-button" id="confirm-reset">Сбросить</button></div>`);$('#confirm-reset').addEventListener('click',()=>{state=initial();closeModal();refresh();toast('Локальные данные очищены')});return}
 if(action==='logout'){modal('OnlyMatch · Выход',`<p>Выход из кабинета выполняется через кнопку в верхней панели.</p><div class="modal-footer"><button class="secondary-button" data-modal-close="true">Закрыть</button></div>`)}
 }
-function detail(s){const [type,id]=s.split(':');if(type==='req'){let r=state.records.find(x=>x.id===id);if(!r)return;modal('Реквизиты · '+r.name,`<div class="info-list"><div class="info-row"><span>Тип</span><strong>${esc(r.type)}</strong></div><div class="info-row"><span>Данные</span><strong>${esc(r.detail)}</strong></div><div class="info-row"><span>Владелец</span><strong>${esc(r.holder)}</strong></div><div class="info-row"><span>Статус</span>${statusTag(r.status)}</div></div><div class="modal-footer"><button class="secondary-button" data-modal-close="true">Закрыть</button><button class="gradient-button" id="toggle-requisite">${r.status==='active'?'В архив':'Активировать'}</button></div>`);$('#toggle-requisite').addEventListener('click',()=>{r.status=r.status==='active'?'archived':'active';closeModal();refresh();toast('Статус изменён')});return}
+function detail(s){const [type,id]=s.split(':');if(type==='req'){let r=state.records.find(x=>x.id===id);if(!r)return;const limits=(Number.isSafeInteger(r.minPaymentRub)&&Number.isSafeInteger(r.maxPaymentRub)&&Number.isSafeInteger(r.maxActiveOrders))?'<div class="info-row"><span>Минимальный платёж</span><strong>'+money(r.minPaymentRub,0)+' ₽</strong></div><div class="info-row"><span>Максимальный платёж</span><strong>'+money(r.maxPaymentRub,0)+' ₽</strong></div><div class="info-row"><span>Максимум активных ордеров</span><strong>'+money(r.maxActiveOrders,0)+'</strong></div>':'<div class="info-row"><span>Лимиты</span><strong>Не заданы</strong></div>';modal('Реквизиты · '+r.name,`<div class="info-list"><div class="info-row"><span>Тип</span><strong>${esc(r.type)}</strong></div><div class="info-row"><span>Данные</span><strong>${esc(r.detail)}</strong></div><div class="info-row"><span>Владелец</span><strong>${esc(r.holder)}</strong></div><div class="info-row"><span>Статус</span>${statusTag(r.status)}</div>${limits}</div><div class="modal-footer"><button class="secondary-button" data-modal-close="true">Закрыть</button><button class="gradient-button" id="toggle-requisite">${r.status==='active'?'В архив':'Активировать'}</button></div>`);$('#toggle-requisite').addEventListener('click',()=>{r.status=r.status==='active'?'archived':'active';closeModal();refresh();toast('Статус изменён')});return}
 if(type==='order'){let r=state.orders.find(x=>x.id===id);if(!r)return;modal('Заявка '+r.id,`<div class="info-strip">Статус этой заявки хранится в браузере и не подтверждён платёжным провайдером.</div><div class="info-list"><div class="info-row"><span>Тип</span><strong>${esc(r.kind)}</strong></div><div class="info-row"><span>Сумма</span><strong>${money(r.amount,0)} ${esc(r.currency)}</strong></div><div class="info-row"><span>Создана</span><strong>${dateFmt(r.created)}</strong></div><div class="info-row"><span>Статус</span>${statusTag(r.status)}</div></div><div class="modal-footer"><button class="secondary-button" data-modal-close="true">Закрыть</button></div>`)}
 }
 function exportCSV(which){let data=which==='wallet'?state.walletOps.map(x=>[x.id,x.kind,x.amount,'USDT',x.status,x.created]):state.orders.filter(x=>x.kind===(which==='payin'?'Pay-In':'Pay-Out')).map(x=>[x.id,x.kind,x.amount,x.currency,x.status,x.created]);let rows=[['ID','Тип','Сумма','Валюта','Статус','Дата'],...data];let csv='\ufeff'+rows.map(row=>row.map(v=>'"'+String(v??'').replace(/"/g,'""')+'"').join(';')).join('\r\n');let blob=new Blob([csv],{type:'text/csv;charset=utf-8'});const u=URL.createObjectURL(blob),link=document.createElement('a');link.href=u;link.download=`onlymatch-${which}-records.csv`;link.click();setTimeout(()=>URL.revokeObjectURL(u),1000);toast('Экспортированы записи из этого браузера')}
