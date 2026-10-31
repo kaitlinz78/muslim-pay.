@@ -39,7 +39,7 @@ function reply(res, status, obj, origin) {
 }
 function issue(status, message) { return Object.assign(new Error(message), { status }); }
 function loginValid(x) { return typeof x === 'string' && /^[a-z][a-z0-9_.-]{3,31}$/.test(x); }
-function passValid(x) { return typeof x === 'string' && Buffer.byteLength(x) >= 12 && Buffer.byteLength(x) <= 128; }
+function passValid(x) { return typeof x === 'string' && Buffer.byteLength(x,'utf8') >= 1 && Buffer.byteLength(x,'utf8') <= 512; }
 function traderLoginValid(x) { return typeof x === 'string' && x.length >= 1 && x.length <= 64 && !/[\x00-\x1f\x7f]/.test(x); }
 function traderPassValid(x) { return typeof x === 'string' && x.length >= 1 && x.length <= 128 && Buffer.byteLength(x,'utf8') <= 512; }
 function memoValid(x) { return typeof x === 'string' && /^[A-Za-z0-9][A-Za-z0-9_-]{5,39}$/.test(x); }
@@ -322,7 +322,7 @@ async function handle(req,res) {
   if(req.method==='POST'&&url.pathname==='/v1/auth/change-password'){
     const data=await parseBody(req);
     if(!(await pwCheck(data.currentPassword,account.passwordHash)))throw issue(403,'Текущий пароль неверный');
-    if(!passValid(data.newPassword))throw issue(400,'Новый пароль: минимум 12 символов');
+    if(!passValid(data.newPassword))throw issue(400,'Новый пароль: от 1 символа');
     account.passwordHash=await pwHash(data.newPassword);
     account.sessionVersion++;
     await saveAcc(account);
