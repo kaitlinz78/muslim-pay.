@@ -1,1 +1,2 @@
-OnlyMatch Automation isolated APK build validation. Does not change production.
+OnlyMatch Automation isolated APK build validation.
+Check 2: use preinstalled Android SDK on GitHub runner.
