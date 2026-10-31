@@ -245,7 +245,6 @@ html:not(.ice-auth-ok) #shell{display:none!important}
 .om-req-fields{display:grid;grid-template-columns:1fr 1fr;gap:12px}
 .om-req-fields .form-field{min-width:0}
 .om-req-fields .om-req-wide{grid-column:1/-1}
-.om-req-note{background:var(--ui-glow,#fce9ee);border:1px solid var(--ui-border,#dce7f6);border-radius:12px;padding:10px 12px;color:var(--ui-ink,#234264);font-size:11px;line-height:1.65;margin-top:10px}
 .om-req-footer{display:flex;align-items:center;justify-content:space-between;gap:9px;flex-wrap:wrap;margin-top:15px}
 .om-req-footer .gradient-button{min-width:145px}
 @media(max-width:440px){.om-req-fields{grid-template-columns:1fr}.om-req-fields .om-req-wide{grid-column:auto}.om-req-step{font-size:11px;padding:8px 6px;gap:5px}.om-req-footer button{flex:1}}
@@ -464,7 +463,7 @@ function openRequisiteWizard(){
     '<label class="form-field">Максимальный платёж, ₽<input type="number" name="maxPaymentRub" inputmode="numeric" min="1" max="100000000" step="1" placeholder="Например, 100000" required value="'+esc(draft.maxPaymentRub)+'"></label>'+
     '<label class="form-field om-req-wide">Максимальное количество активных ордеров<input type="number" name="maxActiveOrders" inputmode="numeric" min="1" max="1000" step="1" placeholder="Например, 5" required value="'+esc(draft.maxActiveOrders)+'"><small class="om-req-hint">Сколько заявок может находиться в работе одновременно на этих реквизитах.</small></label>'+
    '</div>'+
-   '<div class="om-req-note">В этой версии лимиты сохраняются в карточке реквизита. Автоматическое распределение платежей и учёт активных ордеров ещё не подключены. Полный номер банковской карты в браузере не сохраняется.</div>'+
+   
    '<p class="om-req-error" role="alert" aria-live="polite"></p>'+
    '<div class="om-req-footer"><button type="button" class="secondary-button" id="om-req-back">← Назад</button><button type="submit" class="gradient-button">Создать реквизиты</button></div>'+
    '</form>');
