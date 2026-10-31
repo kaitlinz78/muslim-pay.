@@ -18,6 +18,8 @@ jobs:
         with:
           distribution: temurin
           java-version: '17'
+      - uses: android-actions/setup-android@v3
+        continue-on-error: true
       - name: Install Android build packages
         run: |
           echo "ANDROID_HOME=$ANDROID_HOME"
