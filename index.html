@@ -260,6 +260,20 @@ html:not(.ice-auth-ok) #shell{display:none!important}
 .om-req-footer .gradient-button{min-width:145px}
 @media(max-width:440px){.om-req-fields{grid-template-columns:1fr}.om-req-fields .om-req-wide{grid-column:auto}.om-req-step{font-size:11px;padding:8px 6px;gap:5px}.om-req-footer button{flex:1}}
 </style>
+
+<style id="onlymatch-dark-table-hover-fix">
+/* Keep hovered payment/requisite rows dark in every dark color palette.
+   A translucent accent over the legacy white hover row produced a white flash. */
+html[data-ice-mode="dark"] .data-table tbody tr:hover,
+html[data-ice-mode="dark"] .data-table tbody tr:focus-within {
+  background:var(--ui-card)!important;
+}
+html[data-ice-mode="dark"] .data-table tbody tr:hover > td,
+html[data-ice-mode="dark"] .data-table tbody tr:focus-within > td {
+  background:color-mix(in srgb,var(--ui-card) 92%,var(--ui-main) 8%)!important;
+  color:var(--ui-ink)!important;
+}
+</style>
 </head>
 <body>
   <div class="shell" id="shell">
