@@ -190,6 +190,13 @@ async function newSession(account) {
   await storage.set(key('session:'+tokenHash(token)),raw,{EX:hours*3600});
   return {token,expiresInHours:hours};
 }
+async function recordAudit(action,details={}) {
+  try {
+    const entry={action,details,actor:'owner',at:new Date().toISOString()};
+    await storage.lPush(key('owner-audit'),JSON.stringify(entry));
+    await storage.lTrim(key('owner-audit'),0,199);
+  } catch(e){console.error('Owner audit append failed',e.message);}
+}
 async function listTraders() {
   const ids=await storage.sMembers(key('trader-ids'));
   const accounts=(await Promise.all(ids.map(getAcc))).filter(Boolean);
@@ -281,6 +288,19 @@ async function handle(req,res) {
     return reply(res,200,{ok:true,reauth:true},origin);
   }
   if(account.role!=='owner')throw issue(403,'Разрешено только владельцу');
+  if(req.method==='GET'&&url.pathname==='/v1/admin/activity') {
+    const values=await storage.lRange(key('owner-audit'),0,99);
+    return reply(res,200,{events:values.map(x=>JSON.parse(x)),storageVolatile:true},origin);
+  }
+  if(req.method==='GET'&&url.pathname==='/v1/admin/overview') {
+    const users=await listTraders();
+    const valid=users.filter(u=>u.active);
+    return reply(res,200,{traders:users.length,activeTraders:valid.length,
+      blockedTraders:users.length-valid.length,registeredMemos:users.filter(u=>u.memo).length,
+      verifiedInsuranceUSDT:users.reduce((sum,u)=>sum+Number(u.finance?.confirmedInsuranceUSDT||0),0),
+      paymentLedgerEnabled:false,realPayoutsEnabled:false,paymentOrdersConnected:false,
+      storage:'temporary',financialSource:'verified-insurance-only'},origin);
+  }
   if(req.method==='GET'&&url.pathname==='/v1/admin/traders') {
     return reply(res,200,{traders:await listTraders(),storageVolatile:true},origin);
   }
@@ -312,6 +332,7 @@ async function handle(req,res) {
         note,memo,active:true,working:false,sessionVersion:1,createdAt:new Date().toISOString()};
       await saveAcc(trader);
       await storage.sAdd(key('trader-ids'),id);
+      await recordAudit('trader.created',{id,username});
       return reply(res,201,{trader:toPublic(trader),message:'Трейдер создан; логин и пароль активны. Хранилище временное.'},origin);
     }catch(e) {await storage.del(nameKey,memoKey,key('account:'+id));throw e;}
   }
@@ -334,16 +355,19 @@ async function handle(req,res) {
         username:trader.username,oldMemo,newMemo:memo,reason,changedAt:new Date().toISOString()
       }));
       await storage.lTrim(key('memo-history'),0,99);
+      await recordAudit('memo.changed',{id,username:trader.username,oldMemo,newMemo:memo});
     }else if(op==='password'){
       if(!traderPassValid(data.password))throw issue(400,'Пароль: от 1 до 128 символов');
       trader.passwordHash=await pwHash(data.password);
       trader.sessionVersion++;
       await saveAcc(trader);
+      await recordAudit('trader.password_changed',{id,username:trader.username});
     }else {
       if(typeof data.active!=='boolean')throw issue(400,'Ожидается true или false');
       trader.active=data.active;
       if(!data.active)trader.sessionVersion++;
       await saveAcc(trader);
+      await recordAudit('trader.status_changed',{id,username:trader.username,active:trader.active});
     }
     return reply(res,200,{trader:toPublic(trader),ok:true},origin);
   }
