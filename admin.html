@@ -284,7 +284,10 @@ html[data-om-compact="true"] .om-kpi{padding:13px}
     <div class="om-feature"><strong>Распределение трафика</strong><p>Лимиты на реквизит, занятость, приоритет и блокировки по риску</p></div>
     <div class="om-feature"><strong>Сверка поступлений</strong><p>Получение событий от провайдера, защита от дублей и аудит изменений реквизитов</p></div>
   </div>
-  <div class="om-empty-box"><strong>Серверный справочник реквизитов пока не подключён</strong><p>Реквизиты из браузеров трейдеров здесь намеренно не отображаются как общая база.</p></div>
+  <div class="om-empty-box"><strong>Справочник действующих реквизитов пока не синхронизируется с сервером</strong><p>Ниже отображаются удалённые трейдерами реквизиты. Записи фиксируются в серверной истории, а не в их личных кабинетах.</p></div>
+  <div class="card-head" style="margin-top:26px"><h2>История удалённых реквизитов</h2><div class="actions"><button class="btn" id="om-requisites-history-refresh" type="button">Обновить историю</button><button class="btn" id="om-requisites-history-export" type="button">Экспорт CSV</button></div></div>
+  <p class="description">После удаления из архива запись остаётся видимой Owner: трейдер, реквизит, сумма лимитов и время удаления. Сейчас журнал хранится во временном серверном хранилище.</p>
+  <div id="om-deleted-requisites" class="om-audit-list"><div class="empty">Загрузка истории…</div></div>
 </section>
 <section class="card owner-tab-panel" id="tab-disputes" hidden>
   <div class="card-head"><h2>Апелляции и спорные операции</h2><span class="om-tag">Поддержка</span></div>
@@ -340,7 +343,7 @@ html[data-om-compact="true"] .om-kpi{padding:13px}
 </section>
 <section class="card owner-tab-panel" id="tab-activity" hidden>
   <div class="card-head"><h2>Журнал действий Owner</h2><div class="actions"><button class="btn" id="om-refresh-activity" type="button">Обновить</button><button class="btn" id="om-export-activity" type="button">CSV</button></div></div>
-  <p class="description">Создание трейдеров, смена Memo, блокировка аккаунтов и изменения паролей записываются сервером. История сохраняется во временном хранилище.</p>
+  <p class="description">Создание трейдеров, изменение Memo, статусов и паролей, а также удаления архивных реквизитов трейдерами фиксируются в серверном журнале. Хранилище пока временное.</p>
   <div id="om-all-audit" class="om-audit-list"><div class="empty">Загрузка…</div></div>
 </section>
 <div class="om-page-footer">Owner Control Center · Часть модулей будет доступна после подключения постоянного хранилища и платёжного API.</div>
@@ -353,7 +356,7 @@ html[data-om-compact="true"] .om-kpi{padding:13px}
 const API='https://ice-pay-auth.onrender.com',TOKEN='ice-pay-owner-token';
 const el=id=>document.getElementById(id);
 const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-let traders=[],activity=[],activeTab='overview';
+let traders=[],activity=[],deletedRequisites=[],activeTab='overview';
 const TABS=["overview","activity","traders","add","memo","finance","payin","payout","requisites","disputes","analytics","limits","appearance","staff","integrations","security"];
 const TAB_NAMES={"overview":["Обзор платформы","Операционные показатели и управление"],"activity":["Лента событий","Серверный журнал действий Owner"],"traders":["Все трейдеры","Аккаунты, доступ, пароли и профили"],"add":["Добавить трейдера","Создание личного кабинета"],"memo":["Управление Memo","Уникальные идентификаторы TON"],"finance":["Финансы и депозиты","Подтверждённые страховые депозиты"],"payin":["Pay-In","Входящие заявки и маршрутизация"],"payout":["Pay-Out","Очередь выплат и контроль обработки"],"requisites":["Реквизиты","Справочник и распределение платежей"],"disputes":["Апелляции","Работа со спорными операциями"],"analytics":["Аналитика","Показатели аккаунтов и финансов"],"limits":["Лимиты и комиссии","Предварительные параметры конфигурации"],"appearance":["Темы оформления","Настройки внешнего вида Owner"],"staff":["Сотрудники и роли","Разграничение полномочий"],"integrations":["Интеграции","Проверки API и компонентов"],"security":["Безопасность","Пароль Owner и управление доступом"]};
 async function api(path,method='GET',data){
@@ -420,6 +423,7 @@ function switchTab(tab){
   });
  }
  if(tab==='activity'||tab==='overview')loadActivity().catch(()=>{});
+ if(tab==='requisites')loadDeletedRequisites().catch(()=>{});
  if(tab==='overview')loadOwnerOverview().catch(()=>{});
  if(tab==='integrations')checkSystem().catch(()=>{});
  if(tab==='limits')fillLimits();
@@ -562,15 +566,33 @@ function renderAnalytics(){
  ).join('')||'<div class="empty">Нет данных</div>';
 }
 const ACTION_TEXT={'trader.created':'Создан аккаунт трейдера','memo.changed':'Изменён Memo',
- 'trader.password_changed':'Изменён пароль трейдера','trader.status_changed':'Изменён доступ трейдера'};
+ 'trader.password_changed':'Изменён пароль трейдера','trader.status_changed':'Изменён доступ трейдера','requisite.deleted':'Трейдер удалил архивный реквизит'};
 function auditHTML(list){
  if(!list.length)return '<div class="empty">Серверных событий пока нет</div>';
  return list.map(x=>{const d=x.details||{};
-  const caption=[d.username||'',d.oldMemo&&d.newMemo?d.oldMemo+' → '+d.newMemo:'',typeof d.active==='boolean'?(d.active?'Доступ включён':'Доступ отключён'):''].filter(Boolean).join(' · ');
+  const caption=[d.username||'',d.oldMemo&&d.newMemo?d.oldMemo+' → '+d.newMemo:'',typeof d.active==='boolean'?(d.active?'Доступ включён':'Доступ отключён'):'',d.name?(d.name+' · '+(d.type||'')+' · '+(d.detail||'')):''].filter(Boolean).join(' · ');
   let dt='—';try{dt=new Date(x.at).toLocaleString('ru-RU')}catch{}
   return '<div class="om-audit-row"><div><strong>'+esc(ACTION_TEXT[x.action]||x.action||'Событие')+'</strong><p>'+esc(caption||'Owner')+'</p></div><time datetime="'+esc(x.at)+'">'+esc(dt)+'</time></div>';
  }).join('');
 }
+
+async function loadDeletedRequisites(){
+ const d=await api('/v1/admin/requisite-deletions');
+ deletedRequisites=Array.isArray(d.deletions)?d.deletions:[];
+ el('om-deleted-requisites').innerHTML=deletedRequisites.length?deletedRequisites.map(r=>{
+  const ts=r.deletedAt?new Date(r.deletedAt).toLocaleString('ru-RU'):'—';
+  const amount=v=>Number.isSafeInteger(v)?Number(v).toLocaleString('ru-RU')+' ₽':'—';
+  return '<div class="om-audit-row"><div style="min-width:0;overflow-wrap:anywhere">'+
+   '<strong>'+esc(r.name||'Без названия')+'</strong>'+
+   '<p>Трейдер: '+esc(r.username||'—')+' · '+esc(r.type||'—')+' · '+esc(r.detail||'—')+
+   (r.holder?' · '+esc(r.holder):'')+'</p>'+
+   '<p>ID: '+esc(r.requisiteId||'—')+' · Мин.: '+amount(r.minPaymentRub)+
+   ' · Макс.: '+amount(r.maxPaymentRub)+' · Общий лимит: '+amount(r.totalLimitRub)+
+   ' · Активных ордеров: '+esc(r.maxActiveOrders??'—')+'</p>'+
+   '</div><time datetime="'+esc(r.deletedAt||'')+'">'+esc(ts)+'</time></div>';
+ }).join(''):'<div class="empty">Удалённых реквизитов пока нет</div>';
+}
+
 async function loadActivity(){
  try{
   const d=await api('/v1/admin/activity');
@@ -653,6 +675,8 @@ el('om-export-traders').onclick=()=>{
   'onlymatch-traders.csv');
 };
 el('om-refresh-activity').onclick=()=>loadActivity().catch(e=>alert(e.message));
+el('om-requisites-history-refresh').onclick=()=>loadDeletedRequisites().catch(e=>alert(e.message));
+el('om-requisites-history-export').onclick=()=>saveCsv([['Дата удаления','Трейдер','ID','Название','Тип','Данные','Владелец','Минимум ₽','Максимум ₽','Общий лимит ₽','Активные ордера'],...deletedRequisites.map(r=>[r.deletedAt,r.username,r.requisiteId,r.name,r.type,r.detail,r.holder,r.minPaymentRub,r.maxPaymentRub,r.totalLimitRub,r.maxActiveOrders])],'onlymatch-deleted-requisites.csv');
 el('om-export-activity').onclick=()=>saveCsv([['Дата','Действие','Трейдер','Memo до','Memo после'],
  ...activity.map(x=>[x.at,x.action,x.details?.username||'',x.details?.oldMemo||'',x.details?.newMemo||''])],
  'onlymatch-owner-audit.csv');
