@@ -353,7 +353,9 @@ html[data-om-compact="true"] .om-kpi{padding:13px}
 const API='https://ice-pay-auth.onrender.com',TOKEN='ice-pay-owner-token';
 const el=id=>document.getElementById(id);
 const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-let traders=[],activeTab='add';
+let traders=[],activity=[],activeTab='overview';
+const TABS=["overview","activity","traders","add","memo","finance","payin","payout","requisites","disputes","analytics","limits","appearance","staff","integrations","security"];
+const TAB_NAMES={"overview":["Обзор платформы","Операционные показатели и управление"],"activity":["Лента событий","Серверный журнал действий Owner"],"traders":["Все трейдеры","Аккаунты, доступ, пароли и профили"],"add":["Добавить трейдера","Создание личного кабинета"],"memo":["Управление Memo","Уникальные идентификаторы TON"],"finance":["Финансы и депозиты","Подтверждённые страховые депозиты"],"payin":["Pay-In","Входящие заявки и маршрутизация"],"payout":["Pay-Out","Очередь выплат и контроль обработки"],"requisites":["Реквизиты","Справочник и распределение платежей"],"disputes":["Апелляции","Работа со спорными операциями"],"analytics":["Аналитика","Показатели аккаунтов и финансов"],"limits":["Лимиты и комиссии","Предварительные параметры конфигурации"],"appearance":["Темы оформления","Настройки внешнего вида Owner"],"staff":["Сотрудники и роли","Разграничение полномочий"],"integrations":["Интеграции","Проверки API и компонентов"],"security":["Безопасность","Пароль Owner и управление доступом"]};
 async function api(path,method='GET',data){
  const token=sessionStorage.getItem(TOKEN);
  const ctl=new AbortController(),timer=setTimeout(()=>ctl.abort(),18000);
@@ -370,7 +372,9 @@ function showOwner(account){
  if(account.role!=='owner')throw Error('Только Owner может открыть эту страницу');
  document.documentElement.classList.add('owner-authenticated');
  el('owner-login-overlay').style.display='none';el('owner-identity').textContent='OWNER · '+account.username;
- loadTraders().catch(e=>msg('create-message',e.message,true));
+ const requested=decodeURIComponent(location.hash.replace(/^#/,'')),tab=TABS.includes(requested)?requested:'overview';
+ switchTab(tab);
+ loadTraders().then(()=>{loadActivity().catch(()=>{});loadOwnerOverview().catch(()=>{})}).catch(e=>msg('create-message',e.message,true));
 }
 async function resume(){
  if(!sessionStorage.getItem(TOKEN))return;
@@ -393,16 +397,34 @@ el('owner-logout').onclick=()=>{
  location.reload();
 };
 function switchTab(tab){
+ if(!TABS.includes(tab))tab='overview';
  activeTab=tab;
- for(const name of ['add','memo','finance']){
-  el('tab-'+name).hidden=name!==tab;
-  const button=document.querySelector('[data-tab="'+name+'"]');
-  button.classList.toggle('active',name===tab);button.setAttribute('aria-selected',String(name===tab));
+ for(const name of TABS){
+  const panel=el('tab-'+name);
+  if(panel)panel.hidden=name!==tab;
+  const button=document.querySelector('.om-nav-item[data-tab="'+name+'"]');
+  if(button){button.classList.toggle('active',name===tab);button.setAttribute('aria-selected',String(name===tab));}
  }
- if(tab==='memo'||tab==='finance')loadTraders().catch(e=>{
-  const id=tab==='memo'?'trader-rows':'finance-rows',columns=tab==='memo'?5:6;
-  el(id).innerHTML='<tr><td class="empty" colspan="'+columns+'">'+esc(e.message)+'</td></tr>';
- });
+ const info=TAB_NAMES[tab]||TAB_NAMES.overview;
+ el('om-page-title').textContent=info[0];
+ el('om-page-subtitle').textContent=info[1];
+ el('om-top-section').textContent=info[0];
+ document.title=info[0]+' — OnlyMatch Owner';
+ if(location.hash!=='#'+tab)history.replaceState(null,'','#'+tab);
+ if(tab==='memo'||tab==='finance'||tab==='traders'||tab==='overview'||tab==='analytics'){
+  loadTraders().catch(e=>{
+   if(tab==='memo'||tab==='finance'||tab==='traders'){
+    const target=tab==='memo'?'trader-rows':tab==='finance'?'finance-rows':'om-directory-rows';
+    if(el(target))el(target).innerHTML='<tr><td class="empty" colspan="6">'+esc(e.message)+'</td></tr>';
+   }
+  });
+ }
+ if(tab==='activity'||tab==='overview')loadActivity().catch(()=>{});
+ if(tab==='overview')loadOwnerOverview().catch(()=>{});
+ if(tab==='integrations')checkSystem().catch(()=>{});
+ if(tab==='limits')fillLimits();
+ if(tab==='appearance')refreshThemeControls();
+ window.scrollTo({top:0,behavior:'smooth'});
 }
 document.querySelectorAll('[data-tab]').forEach(btn=>btn.onclick=()=>switchTab(btn.dataset.tab));
 el('new-trader-form').onsubmit=async e=>{
@@ -443,7 +465,7 @@ async function openFinance(trader){
 }
 async function loadTraders(){
  const d=await api('/v1/admin/traders');
- traders=d.traders||[];drawTraders();drawFinance();
+ traders=d.traders||[];drawTraders();drawFinance();drawDirectory();updateOverview();renderAnalytics();
  if(activeTab==='memo'){
   const h=await api('/v1/admin/memo-history');
   const records=h.history||[];
@@ -496,6 +518,153 @@ el('refresh-finance').onclick=()=>loadTraders().catch(e=>alert(e.message));
 el('finance-rows').onclick=async e=>{const btn=e.target.closest('[data-finance]');if(!btn)return;const trader=traders.find(x=>x.id===btn.dataset.finance);if(!trader)return;try{await openFinance(trader)}catch(err){alert(err.message)}};
 el('trader-search').oninput=drawTraders;
 document.addEventListener('keydown',e=>{if(e.key==='Escape')el('dialog-root').replaceChildren()});
+
+/* Owner Control Center interactive modules */
+function drawDirectory(){
+ const query=(el('om-directory-search')?.value||'').trim().toLowerCase();
+ const list=traders.filter(t=>[t.username,t.id,t.memo,t.note].some(x=>String(x||'').toLowerCase().includes(query)));
+ el('om-directory-rows').innerHTML=list.map(t=>
+ '<tr><td data-label="Трейдер"><div><span class="name">'+esc(t.username)+'</span><span class="user-id">'+esc(t.id)+'</span></div></td>'+
+ '<td data-label="Заметка"><span class="owner-card-note">'+esc(t.note||'—')+'</span></td>'+
+ '<td data-label="Memo"><code class="code">'+esc(t.memo||'—')+'</code></td>'+
+ '<td data-label="Доступ"><span class="owner-pill '+(t.active?'':'off')+'">'+(t.active?'Разрешён':'Отключён')+'</span></td>'+
+ '<td data-label="Действия"><div class="tools"><button class="btn" data-profile="'+esc(t.id)+'">Анкета</button><button class="btn" data-edit="'+esc(t.id)+'">Memo</button><button class="btn" data-finance="'+esc(t.id)+'">Финансы</button><button class="btn" data-password="'+esc(t.id)+'">Пароль</button><button class="btn" data-status="'+esc(t.id)+'">'+(t.active?'Отключить':'Включить')+'</button></div></td></tr>'
+ ).join('')||'<tr><td class="empty" colspan="5">Нет трейдеров</td></tr>';
+}
+function updateOverview(){
+ const count=traders.length,active=traders.filter(t=>t.active).length;
+ const memos=traders.filter(t=>!!t.memo).length;
+ const insurance=traders.reduce((sum,t)=>sum+Number(t.finance?.confirmedInsuranceUSDT||0),0);
+ const map={'om-count-traders':count,'om-count-active':active,'om-count-memos':memos,
+  'om-count-insurance':insurance.toLocaleString('ru-RU',{minimumFractionDigits:2,maximumFractionDigits:2})+' USDT',
+  'om-analytics-users':count,'om-analytics-active':active,
+  'om-analytics-insurance':insurance.toLocaleString('ru-RU',{minimumFractionDigits:2,maximumFractionDigits:2})+' USDT'};
+ for(const [id,value] of Object.entries(map))if(el(id))el(id).textContent=value;
+}
+async function loadOwnerOverview(){
+ try{
+  const summary=await api('/v1/admin/overview');
+  const fields={'om-count-traders':summary.traders,'om-count-active':summary.activeTraders,'om-count-memos':summary.registeredMemos,
+   'om-count-insurance':Number(summary.verifiedInsuranceUSDT||0).toFixed(2)+' USDT'};
+  for(const [id,value] of Object.entries(fields))if(el(id))el(id).textContent=value;
+ }catch(err){console.warn('Overview backend',err.message)}
+}
+function renderAnalytics(){
+ const count=traders.length,active=traders.filter(t=>t.active).length,disabled=count-active;
+ const body=[
+  ['Активные трейдеры',active,'#448de9'],['Отключённые',disabled,'#b3c8e2'],
+  ['Назначенные Memo',traders.filter(t=>t.memo).length,'#59b9d8']
+ ];
+ const base=Math.max(1,count);
+ el('om-account-chart').innerHTML=body.map(([label,value])=>
+  '<div><div class="om-bar-caption"><span>'+esc(label)+'</span><strong>'+value+'</strong></div>'+
+  '<div class="om-bar-track"><div class="om-bar-fill" style="width:'+Math.min(100,Math.round(value/base*100))+'%"></div></div></div>'
+ ).join('')||'<div class="empty">Нет данных</div>';
+}
+const ACTION_TEXT={'trader.created':'Создан аккаунт трейдера','memo.changed':'Изменён Memo',
+ 'trader.password_changed':'Изменён пароль трейдера','trader.status_changed':'Изменён доступ трейдера'};
+function auditHTML(list){
+ if(!list.length)return '<div class="empty">Серверных событий пока нет</div>';
+ return list.map(x=>{const d=x.details||{};
+  const caption=[d.username||'',d.oldMemo&&d.newMemo?d.oldMemo+' → '+d.newMemo:'',typeof d.active==='boolean'?(d.active?'Доступ включён':'Доступ отключён'):''].filter(Boolean).join(' · ');
+  let dt='—';try{dt=new Date(x.at).toLocaleString('ru-RU')}catch{}
+  return '<div class="om-audit-row"><div><strong>'+esc(ACTION_TEXT[x.action]||x.action||'Событие')+'</strong><p>'+esc(caption||'Owner')+'</p></div><time datetime="'+esc(x.at)+'">'+esc(dt)+'</time></div>';
+ }).join('');
+}
+async function loadActivity(){
+ try{
+  const d=await api('/v1/admin/activity');
+  activity=d.events||[];
+  el('om-recent-audit').innerHTML=auditHTML(activity.slice(0,5));
+  el('om-all-audit').innerHTML=auditHTML(activity);
+ }catch(e){
+  el('om-recent-audit').innerHTML='<div class="empty">История пока недоступна</div>';
+  el('om-all-audit').innerHTML='<div class="empty">Сервис истории недоступен</div>';
+  throw e;
+ }
+}
+function saveCsv(rows,name){
+ const csv='\ufeff'+rows.map(row=>row.map(v=>'"'+String(v??'').replace(/"/g,'""')+'"').join(';')).join('\r\n');
+ const url=URL.createObjectURL(new Blob([csv],{type:'text/csv;charset=utf-8'}));
+ const a=document.createElement('a');a.href=url;a.download=name;a.click();setTimeout(()=>URL.revokeObjectURL(url),1200);
+}
+const LIMITS_KEY='onlymatch-owner-limits-local-v1';
+const LIMIT_DEFAULT={payinMax:'500000',payoutMax:'500000',payinFee:'0',payoutFee:'0',note:''};
+function fillLimits(){
+ let saved={...LIMIT_DEFAULT};
+ try{const x=JSON.parse(localStorage.getItem(LIMITS_KEY));if(x&&typeof x==='object')saved={...saved,...x}}catch{}
+ const form=el('om-limits-form');
+ for(const [k,v] of Object.entries(saved))if(form.elements.namedItem(k))form.elements.namedItem(k).value=String(v);
+}
+el('om-limits-form').onsubmit=e=>{
+ e.preventDefault();
+ const form=e.target;
+ if(!form.reportValidity())return;
+ const f=new FormData(form),data={};
+ for(const k of ['payinMax','payoutMax','payinFee','payoutFee'])data[k]=String(f.get(k)||'0');
+ data.note=String(f.get('note')||'').slice(0,500);
+ try{localStorage.setItem(LIMITS_KEY,JSON.stringify(data));msg('om-limits-message','Сохранено в этом браузере. Платёжные правила не менялись.')}
+ catch{msg('om-limits-message','Браузер не разрешил сохранить данные',true)}
+};
+const THEME_KEY='onlymatch-owner-appearance-v1';
+let themePrefs={theme:'ice',compact:false};
+function applyTheme(){
+ const allowed=new Set(['ice','violet','graphite']);
+ if(!allowed.has(themePrefs.theme))themePrefs.theme='ice';
+ document.documentElement.dataset.omTheme=themePrefs.theme;
+ document.documentElement.dataset.omCompact=String(!!themePrefs.compact);
+}
+function storeTheme(){
+ try{localStorage.setItem(THEME_KEY,JSON.stringify(themePrefs))}catch{}
+ applyTheme();refreshThemeControls();
+}
+function refreshThemeControls(){
+ for(const b of document.querySelectorAll('[data-theme-choice]')){
+  const yes=b.dataset.themeChoice===themePrefs.theme;
+  b.classList.toggle('chosen',yes);
+  b.setAttribute('aria-pressed',String(yes));
+ }
+ el('om-compact-toggle').checked=!!themePrefs.compact;
+}
+try{const v=JSON.parse(localStorage.getItem(THEME_KEY));if(v&&typeof v==='object')themePrefs={...themePrefs,...v}}catch{}
+applyTheme();
+document.querySelectorAll('[data-theme-choice]').forEach(b=>b.onclick=()=>{themePrefs.theme=b.dataset.themeChoice;storeTheme()});
+el('om-compact-toggle').onchange=e=>{themePrefs.compact=e.target.checked;storeTheme()};
+el('om-theme-reset').onclick=()=>{themePrefs={theme:'ice',compact:false};storeTheme()};
+async function checkSystem(){
+ const apiState=el('om-api-status'),dbState=el('om-db-status');
+ apiState.textContent='Проверяем…';dbState.textContent='Проверяем…';
+ try{
+  const ctl=new AbortController(),timeout=setTimeout(()=>ctl.abort(),12000);
+  let r;try{r=await fetch(API+'/health',{signal:ctl.signal,cache:'no-store'})}finally{clearTimeout(timeout)}
+  const data=await r.json();
+  apiState.textContent=r.ok&&data.authEnabled?'Работает':'Недоступен';
+  dbState.textContent=data.persistent?'Постоянная база':data.authEnabled?'Временное хранилище':'Недоступно';
+ }catch{
+  apiState.textContent='Нет ответа';dbState.textContent='Нет данных';
+ }
+}
+document.querySelectorAll('[data-quick-tab]').forEach(b=>b.onclick=()=>switchTab(b.dataset.quickTab));
+el('om-directory-rows').onclick=el('trader-rows').onclick;
+el('om-directory-search').oninput=drawDirectory;
+el('om-export-traders').onclick=()=>{
+ saveCsv([['Логин','ID','Memo','Активен','Заметка','Дата регистрации'],
+  ...traders.map(t=>[t.username,t.id,t.memo||'',t.active?'Да':'Нет',t.note||'',t.createdAt||''])],
+  'onlymatch-traders.csv');
+};
+el('om-refresh-activity').onclick=()=>loadActivity().catch(e=>alert(e.message));
+el('om-export-activity').onclick=()=>saveCsv([['Дата','Действие','Трейдер','Memo до','Memo после'],
+ ...activity.map(x=>[x.at,x.action,x.details?.username||'',x.details?.oldMemo||'',x.details?.newMemo||''])],
+ 'onlymatch-owner-audit.csv');
+el('om-check-system').onclick=()=>checkSystem();
+el('om-change-owner-password').onclick=()=>el('owner-password-btn').click();
+window.addEventListener('hashchange',()=>{
+ if(document.documentElement.classList.contains('owner-authenticated')){
+  const v=decodeURIComponent(location.hash.replace(/^#/,''));
+  if(TABS.includes(v)&&v!==activeTab)switchTab(v);
+ }
+});
+
 resume();
 })();
 </script>
