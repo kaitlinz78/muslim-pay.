@@ -161,6 +161,7 @@ html[data-om-compact="true"] td{padding:10px}
 html[data-om-compact="true"] .om-kpi{padding:13px}
 @media(max-width:1050px){.shell{grid-template-columns:223px minmax(0,1fr)}.om-kpi-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.om-section-grid{grid-template-columns:1fr}.om-theme-grid{gap:9px}}
 @media(max-width:760px){.shell{display:block}aside{position:relative;height:auto;overflow:visible;display:block;padding:10px;border-bottom:1px solid #d5e5fa}.om-brand-panel{padding:7px 8px;border-bottom:0}.om-online,.side-foot{display:none!important}.om-sidebar-nav{flex-direction:row;gap:6px;overflow-x:auto;scrollbar-width:thin;padding:8px 1px;display:flex}.om-nav-group{display:flex;flex:0 0 auto;gap:6px}.om-nav-group .side-title{display:none}.om-nav-item{width:auto;white-space:nowrap;min-height:39px;padding:8px 10px;font-size:11px}.om-nav-icon{font-size:14px;width:18px;flex-basis:18px}.topbar{height:62px}.om-kpi-grid{gap:9px}.om-kpi{padding:14px}.om-quick-grid{grid-template-columns:1fr 1fr}.om-feature-grid,.om-theme-grid{grid-template-columns:1fr}.om-theme-swatches{height:56px}.om-audit-row{align-items:flex-start}.om-theme-option{grid-template-columns:80px 1fr;align-items:center}.om-theme-option small{grid-column:2}.om-theme-swatches{grid-row:1/3}.om-page-footer{margin:12px 0}.page{padding:19px 13px}}
+</style>
 <style id="om-vector-navigation">
 /* Personalised vector icon kit for each navigation item */
 .om-svg-sprite{position:absolute;width:0;height:0;overflow:hidden;pointer-events:none}
@@ -190,7 +191,6 @@ html[data-om-theme="graphite"] .om-nav-item .om-nav-icon{background:#2b3e5b;filt
 html[data-om-theme="graphite"] .om-nav-item.active .om-nav-icon{background:#344b6e}
 .om-merchant-kpis{grid-template-columns:repeat(4,minmax(0,1fr))}
 @media(max-width:760px){.om-nav-item{min-height:41px;padding:5px 8px;gap:6px}.om-nav-item .om-nav-icon{width:29px;height:29px;flex-basis:29px;border-radius:9px}.om-nav-icon svg{width:16px;height:16px}.om-merchant-kpis{grid-template-columns:repeat(2,minmax(0,1fr))}}
-</style>
 </style>
 </head>
 
@@ -410,7 +410,7 @@ html[data-om-theme="graphite"] .om-nav-item.active .om-nav-icon{background:#344b
 const API='https://ice-pay-auth.onrender.com',TOKEN='ice-pay-owner-token';
 const el=id=>document.getElementById(id);
 const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-let traders=[],activity=[],deletedRequisites=[],activeTab='overview';
+let traders=[],activity=[],deletedRequisites=[],merchants=[],activeTab='overview';
 const TABS=["overview","activity","traders","add","memo","finance","payin","payout","requisites","disputes","analytics","merchants","limits","appearance","staff","integrations","security"];
 const TAB_NAMES={"overview":["Обзор платформы","Операционные показатели и управление"],"activity":["Лента событий","Серверный журнал действий Owner"],"traders":["Все трейдеры","Аккаунты, доступ, пароли и профили"],"add":["Добавить трейдера","Создание личного кабинета"],"memo":["Управление Memo","Уникальные идентификаторы TON"],"finance":["Финансы и депозиты","Подтверждённые страховые депозиты"],"payin":["Pay-In","Входящие заявки и маршрутизация"],"payout":["Pay-Out","Очередь выплат и контроль обработки"],"requisites":["Реквизиты","Справочник и распределение платежей"],"disputes":["Апелляции","Работа со спорными операциями"],"analytics":["Аналитика","Показатели аккаунтов и финансов"],"limits":["Лимиты и комиссии","Предварительные параметры конфигурации"],"appearance":["Темы оформления","Настройки внешнего вида Owner"],"staff":["Сотрудники и роли","Разграничение полномочий"],"integrations":["Интеграции","Проверки API и компонентов"],"security":["Безопасность","Пароль Owner и управление доступом"],"merchants":["Мерчанты и интеграции","Управление партнёрами и подготовка подключений"]};
 async function api(path,method='GET',data){
@@ -480,6 +480,7 @@ function switchTab(tab){
  if(tab==='requisites')loadDeletedRequisites().catch(()=>{});
  if(tab==='overview')loadOwnerOverview().catch(()=>{});
  if(tab==='integrations')checkSystem().catch(()=>{});
+ if(tab==='merchants')loadMerchants().catch(e=>merchantError(e.message));
  if(tab==='limits')fillLimits();
  if(tab==='appearance')refreshThemeControls();
  window.scrollTo({top:0,behavior:'smooth'});
@@ -620,7 +621,7 @@ function renderAnalytics(){
  ).join('')||'<div class="empty">Нет данных</div>';
 }
 const ACTION_TEXT={'trader.created':'Создан аккаунт трейдера','memo.changed':'Изменён Memo',
- 'trader.password_changed':'Изменён пароль трейдера','trader.status_changed':'Изменён доступ трейдера','requisite.deleted':'Трейдер удалил архивный реквизит'};
+ 'trader.password_changed':'Изменён пароль трейдера','trader.status_changed':'Изменён доступ трейдера','merchant.created':'Создан мерчант','merchant.updated':'Изменён мерчант','requisite.deleted':'Трейдер удалил архивный реквизит'};
 function auditHTML(list){
  if(!list.length)return '<div class="empty">Серверных событий пока нет</div>';
  return list.map(x=>{const d=x.details||{};
@@ -742,6 +743,40 @@ window.addEventListener('hashchange',()=>{
   if(TABS.includes(v)&&v!==activeTab)switchTab(v);
  }
 });
+
+
+function merchantError(error){el('om-merchant-rows').innerHTML='<tr><td colspan="5" class="empty">'+esc(error)+'</td></tr>';}
+function renderMerchants(){
+ el('om-merchant-total').textContent=merchants.length;
+ el('om-merchant-drafts').textContent=merchants.filter(x=>x.status==='draft').length;
+ el('om-merchant-paused').textContent=merchants.filter(x=>x.status==='paused').length;
+ el('om-merchant-rows').innerHTML=merchants.map(m=>{
+ const website=m.website&&/^https:\/\//i.test(m.website)?'<a href="'+esc(m.website)+'" target="_blank" rel="noopener noreferrer">'+esc(m.website)+'</a>':'—';
+ return '<tr><td data-label="Мерчант"><strong class="name">'+esc(m.name)+'</strong><span class="user-id">'+esc(m.id)+'</span><span class="owner-card-note">'+esc(m.note||'')+'</span></td>'+
+ '<td data-label="Сайт">'+website+'</td><td data-label="Создан">'+date(m.createdAt)+'</td>'+
+ '<td data-label="Статус"><span class="owner-pill '+(m.status==='paused'?'off':'')+'">'+(m.status==='draft'?'Черновик':'Приостановлен')+'</span></td>'+
+ '<td data-label="Действие"><button class="btn" type="button" data-merchant-edit="'+esc(m.id)+'">Редактировать</button></td></tr>';
+ }).join('')||'<tr><td class="empty" colspan="5">Мерчантов пока нет</td></tr>';
+}
+async function loadMerchants(){const d=await api('/v1/admin/merchants');merchants=Array.isArray(d.merchants)?d.merchants:[];renderMerchants();}
+function merchantForm(m){
+ const original=m||{};
+ dialog(m?'Редактировать мерчанта':'Новый мерчант',
+  '<p class="description">Карточка мерчанта не подключает платёжный API.</p>'+
+  '<label class="owner-field">Название<input name="name" required maxlength="80" value="'+esc(original.name||'')+'" placeholder="Название компании"></label>'+
+  '<label class="owner-field">Сайт HTTPS<input name="website" type="url" maxlength="255" value="'+esc(original.website||'')+'" placeholder="https://example.com"></label>'+
+  '<label class="owner-field">Заметка<textarea name="note" maxlength="500">'+esc(original.note||'')+'</textarea></label>'+
+  (m?'<label class="owner-field">Статус<select name="status"><option value="draft" '+(m.status==='draft'?'selected':'')+'>Черновик</option><option value="paused" '+(m.status==='paused'?'selected':'')+'>Приостановлен</option></select></label>':''),
+ async data=>{
+ const payload={name:String(data.get('name')||'').trim(),website:String(data.get('website')||'').trim(),note:String(data.get('note')||'').trim()};
+ if(m){payload.status=String(data.get('status')||'draft');await api('/v1/admin/merchants/'+encodeURIComponent(m.id),'PATCH',payload);}
+ else await api('/v1/admin/merchants','POST',payload);
+ await loadMerchants();await loadActivity().catch(()=>{});
+ });
+}
+el('om-merchant-refresh').onclick=()=>loadMerchants().catch(e=>merchantError(e.message));
+el('om-merchant-add').onclick=()=>merchantForm(null);
+el('om-merchant-rows').onclick=e=>{const b=e.target.closest('[data-merchant-edit]');if(!b)return;const m=merchants.find(x=>x.id===b.dataset.merchantEdit);if(m)merchantForm(m);};
 
 resume();
 })();
