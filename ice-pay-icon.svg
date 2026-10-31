@@ -1,7 +1,1 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
-<defs><linearGradient id="ice" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#50baff"/><stop offset="1" stop-color="#235ddd"/></linearGradient></defs>
-<rect width="64" height="64" rx="18" fill="url(#ice)"/>
-<path d="M18 20v24M25 20v24" stroke="#fff" stroke-width="6" stroke-linecap="round"/>
-<path d="M44 19c-12-5-20 0-20 13 0 13 9 18 20 13" fill="none" stroke="#fff" stroke-width="6" stroke-linecap="round"/>
-<path d="M48 13v8M44 17h8" stroke="#d9f5ff" stroke-width="2" stroke-linecap="round"/>
-</svg>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64"><defs><linearGradient id="g" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#52beff"/><stop offset="1" stop-color="#2f57d3"/></linearGradient></defs><rect width="64" height="64" rx="17" fill="url(#g)"/><text x="32" y="40" text-anchor="middle" font-family="Arial,sans-serif" font-size="23" font-weight="800" letter-spacing="-2" fill="#fff">OM</text></svg>

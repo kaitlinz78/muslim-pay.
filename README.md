@@ -1,6 +1,6 @@
-# ВОВА КОЛОКОЛЬЦЕВ
+# OnlyMatch
 
-Standalone responsive interactive demo based on user-provided screenshots. No connection to CRYPTONEX.
+OnlyMatch responsive trading dashboard and owner admin panel. No connection to CRYPTONEX.
 
 ## Deployment
 Static website: Render Static Site, branch main, build command `mkdir -p public && cp index.html public/index.html`, publish directory `public`.
