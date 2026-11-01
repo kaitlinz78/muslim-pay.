@@ -293,7 +293,7 @@ html[data-om-theme="graphite"] .om-nav-item.active .om-nav-icon{background:#344b
         <div><span>Автоматические выплаты</span><strong class="om-state-muted">Не подключены</strong></div></div>
     </section>
   </div>
-  <section class="card"><div class="card-head"><h2>Последние действия Owner</h2><button class="btn" type="button" data-quick-tab="activity">Вся история</button></div><div id="om-recent-audit" class="om-audit-list"><div class="empty">Загрузка…</div></div></section>
+  <section class="card"><div class="card-head"><h2>Последние действия</h2><button class="btn" type="button" data-quick-tab="activity">Вся история</button></div><div id="om-recent-audit" class="om-audit-list"><div class="empty">Загрузка…</div></div></section>
 </section>
 <section class="card owner-tab-panel" id="tab-traders" hidden>
   <div class="card-head"><h2>Аккаунты трейдеров</h2><div class="actions"><input id="om-directory-search" class="search" placeholder="Логин, ID, заметка" aria-label="Поиск трейдеров"><button class="btn primary" data-quick-tab="add" type="button">+ Новый трейдер</button><button class="btn" id="om-export-traders" type="button">Экспорт CSV</button></div></div>
@@ -412,7 +412,7 @@ const el=id=>document.getElementById(id);
 const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 let traders=[],activity=[],deletedRequisites=[],merchants=[],activeTab='overview';
 const TABS=["overview","activity","traders","add","memo","finance","payin","payout","requisites","disputes","analytics","merchants","limits","appearance","staff","integrations","security"];
-const TAB_NAMES={"overview":["Обзор платформы","Операционные показатели и управление"],"activity":["Лента событий","Серверный журнал действий Owner"],"traders":["Все трейдеры","Аккаунты, доступ, пароли и профили"],"add":["Добавить трейдера","Создание личного кабинета"],"memo":["Управление Memo","Уникальные идентификаторы TON"],"finance":["Финансы и депозиты","Подтверждённые страховые депозиты"],"payin":["Pay-In","Входящие заявки и маршрутизация"],"payout":["Pay-Out","Очередь выплат и контроль обработки"],"requisites":["Реквизиты","Справочник и распределение платежей"],"disputes":["Апелляции","Работа со спорными операциями"],"analytics":["Аналитика","Показатели аккаунтов и финансов"],"limits":["Лимиты и комиссии","Предварительные параметры конфигурации"],"appearance":["Темы оформления","Настройки внешнего вида Owner"],"staff":["Сотрудники и роли","Разграничение полномочий"],"integrations":["Интеграции","Проверки API и компонентов"],"security":["Безопасность","Пароль Owner и управление доступом"],"merchants":["Мерчанты и интеграции","Управление партнёрами и подготовка подключений"]};
+const TAB_NAMES={"overview":["Обзор платформы","Операционные показатели и управление"],"activity":["Лента событий","Серверный журнал действий"],"traders":["Все трейдеры","Аккаунты, доступ, пароли и профили"],"add":["Добавить трейдера","Создание личного кабинета"],"memo":["Управление Memo","Уникальные идентификаторы TON"],"finance":["Финансы и депозиты","Подтверждённые страховые депозиты"],"payin":["Pay-In","Входящие заявки и маршрутизация"],"payout":["Pay-Out","Очередь выплат и контроль обработки"],"requisites":["Реквизиты","Справочник и распределение платежей"],"disputes":["Апелляции","Работа со спорными операциями"],"analytics":["Аналитика","Показатели аккаунтов и финансов"],"limits":["Лимиты и комиссии","Предварительные параметры конфигурации"],"appearance":["Темы оформления","Настройки внешнего вида Owner"],"staff":["Сотрудники и роли","Разграничение полномочий"],"integrations":["Интеграции","Проверки API и компонентов"],"security":["Безопасность","Пароль Owner и управление доступом"],"merchants":["Мерчанты и интеграции","Управление партнёрами и подготовка подключений"]};
 async function api(path,method='GET',data){
  const token=sessionStorage.getItem(TOKEN);
  const ctl=new AbortController(),timer=setTimeout(()=>ctl.abort(),18000);
@@ -625,9 +625,10 @@ const ACTION_TEXT={'trader.created':'Создан аккаунт трейдер�
 function auditHTML(list){
  if(!list.length)return '<div class="empty">Серверных событий пока нет</div>';
  return list.map(x=>{const d=x.details||{};
-  const caption=[d.username||'',d.oldMemo&&d.newMemo?d.oldMemo+' → '+d.newMemo:'',typeof d.active==='boolean'?(d.active?'Доступ включён':'Доступ отключён'):'',d.name?(d.name+' · '+(d.type||'')+' · '+(d.detail||'')):''].filter(Boolean).join(' · ');
+  const caption=[d.username||'',d.changedBy==='trader'?'Сменил самостоятельно':d.changedBy==='owner'?'Изменено Owner':'',d.oldMemo&&d.newMemo?d.oldMemo+' → '+d.newMemo:'',typeof d.active==='boolean'?(d.active?'Доступ включён':'Доступ отключён'):'',d.name?(d.name+' · '+(d.type||'')+' · '+(d.detail||'')):''].filter(Boolean).join(' · ');
   let dt='—';try{dt=new Date(x.at).toLocaleString('ru-RU')}catch{}
-  return '<div class="om-audit-row"><div><strong>'+esc(ACTION_TEXT[x.action]||x.action||'Событие')+'</strong><p>'+esc(caption||'Owner')+'</p></div><time datetime="'+esc(x.at)+'">'+esc(dt)+'</time></div>';
+  const actionTitle=x.action==='trader.password_changed'&&d.changedBy==='trader'?'Трейдер сменил пароль':(ACTION_TEXT[x.action]||x.action||'Событие');
+  return '<div class="om-audit-row"><div><strong>'+esc(actionTitle)+'</strong><p>'+esc(caption||'Owner')+'</p></div><time datetime="'+esc(x.at)+'">'+esc(dt)+'</time></div>';
  }).join('');
 }
 
@@ -648,6 +649,18 @@ async function loadDeletedRequisites(){
  }).join(''):'<div class="empty">Удалённых реквизитов пока нет</div>';
 }
 
+// Keep the Owner activity feed current while the dashboard or activity page is open.
+setInterval(()=>{
+ if(document.visibilityState==='visible' &&
+    document.documentElement.classList.contains('owner-authenticated') &&
+    (activeTab==='overview'||activeTab==='activity')){
+  loadActivity().catch(()=>{});
+ }
+},15000);
+document.addEventListener('visibilitychange',()=>{
+ if(!document.hidden&&document.documentElement.classList.contains('owner-authenticated') &&
+    (activeTab==='overview'||activeTab==='activity'))loadActivity().catch(()=>{});
+});
 async function loadActivity(){
  try{
   const d=await api('/v1/admin/activity');

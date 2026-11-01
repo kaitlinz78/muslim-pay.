@@ -322,10 +322,23 @@ async function handle(req,res) {
   if(req.method==='POST'&&url.pathname==='/v1/auth/change-password'){
     const data=await parseBody(req);
     if(!(await pwCheck(data.currentPassword,account.passwordHash)))throw issue(403,'Текущий пароль неверный');
-    if(!passValid(data.newPassword))throw issue(400,'Новый пароль: от 1 символа');
+    if(!(account.role==='trader'?traderPassValid(data.newPassword):passValid(data.newPassword)))throw issue(400,'Новый пароль: от 1 до 128 символов');
     account.passwordHash=await pwHash(data.newPassword);
     account.sessionVersion++;
-    await saveAcc(account);
+    if(account.role==='trader'){
+      account.updatedAt=new Date().toISOString();
+      const event={action:'trader.password_changed',actor:account.username,
+        at:account.updatedAt,details:{id:account.id,username:account.username,changedBy:'trader'}};
+      // Store the new password hash and Owner-visible audit entry in one transaction.
+      // Neither plaintext passwords nor password hashes appear in the audit.
+      await storage.multi()
+        .set(key('account:'+account.id),JSON.stringify(account))
+        .lPush(key('owner-audit'),JSON.stringify(event))
+        .lTrim(key('owner-audit'),0,199)
+        .exec();
+    }else{
+      await saveAcc(account);
+    }
     return reply(res,200,{ok:true,reauth:true},origin);
   }
   if(account.role!=='owner')throw issue(403,'Разрешено только владельцу');
@@ -447,7 +460,7 @@ async function handle(req,res) {
       trader.passwordHash=await pwHash(data.password);
       trader.sessionVersion++;
       await saveAcc(trader);
-      await recordAudit('trader.password_changed',{id,username:trader.username});
+      await recordAudit('trader.password_changed',{id,username:trader.username,changedBy:'owner'});
     }else {
       if(typeof data.active!=='boolean')throw issue(400,'Ожидается true или false');
       trader.active=data.active;
