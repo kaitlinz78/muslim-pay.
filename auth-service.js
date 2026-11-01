@@ -10,6 +10,7 @@ const crypto = require('node:crypto');
 const { promisify } = require('node:util');
 const { createClient } = require('redis');
 const trc20=require('./trc20-deposits');
+const manualDeposits=require('./manual-deposits');
 const durable=require('./durable-auth');
 const dns = require('node:dns').promises;
 const net = require('node:net');
@@ -81,7 +82,9 @@ async function financeOf(account) {
   const raw = await storage.get(key('finance:verified-insurance:' + account.id));
   const parsed = typeof raw==='string' && /^(?:0|[1-9]\d{0,8})(?:\.\d{1,2})?$/.test(raw) ? Number(raw) : 0;
   const chain=await trc20.balances(account.id);
-  const confirmedInsuranceUSDT=(Number.isFinite(parsed) ? Math.max(0,parsed) : 0)+chain.insuranceUSDT;
+  let manual={mainUSDT:0,insuranceUSDT:0},manualAvailable=false;
+  try{manual=await manualDeposits.balances(account.id);manualAvailable=true}catch(e){console.warn('[OnlyMatch deposit balances]',e.message)}
+  const confirmedInsuranceUSDT=(Number.isFinite(parsed) ? Math.max(0,parsed) : 0)+chain.insuranceUSDT+manual.insuranceUSDT;
   // Owner-defined per-trader requirement; legacy accounts retain 500 USDT.
   // Store integer cents to avoid precision errors. This is a requirement only,
   // never a substitute for verified deposits.
@@ -92,15 +95,16 @@ async function financeOf(account) {
   return {
     accountId: account.id,
     confirmedInsuranceUSDT,
-    mainBalanceUSDT:chain.mainUSDT,
-    depositAutoCreditEnabled:chain.enabled,
+    mainBalanceUSDT:chain.mainUSDT+manual.mainUSDT,
+    manualDepositEnabled:manualAvailable,
+    depositAutoCreditEnabled:false,
     minimumInsuranceUSDT,
     shortfallUSDT: Math.max(0, Math.round((minimumInsuranceUSDT-confirmedInsuranceUSDT)*100)/100),
     workEligible,
     working: workEligible && !!account.working,
     verification: raw === null ? 'not_connected' : 'server_verified',
-    autoCreditEnabled: chain.enabled,
-    note: chain.enabled ? 'Зачисления USDT TRC20 подтверждены и учтены сервером.' : 'Пополнение USDT TRC20 временно недоступно.'
+    autoCreditEnabled: false,
+    note: manualAvailable ? 'Заявки на пополнение проверяются перед зачислением.' : 'Приём заявок на пополнение временно недоступен.'
   };
 }
 async function allocateMemo() {
@@ -283,6 +287,17 @@ async function handle(req,res) {
   }
   // Real TRC20 invoices are available ONLY after the persistent-account
   // migration and PostgreSQL-backed ledger have both been enabled.
+  if(req.method==='GET'&&url.pathname==='/v1/trader/deposit-requests'){
+    if(account.role!=='trader')throw issue(403,'Доступ только трейдеру');
+    return reply(res,200,{orders:await manualDeposits.list(account.id)},origin);
+  }
+  if(req.method==='POST'&&url.pathname==='/v1/trader/deposit-requests'){
+    if(account.role!=='trader')throw issue(403,'Доступ только трейдеру');
+    const body=await parseBody(req);
+    const order=await manualDeposits.create(account.id,body.purpose,body.amount,body.txid);
+    await recordAudit('deposit.submitted',{id:order.id,accountId:account.id,username:account.username,purpose:order.purpose,amountUSDT:order.amountUSDT});
+    return reply(res,201,{order},origin);
+  }
   if(req.method==='GET'&&url.pathname==='/v1/trader/trc20/config'){
     if(account.role!=='trader')throw issue(403,'Доступ только трейдерам');
     return reply(res,200,await trc20.config(),origin);
@@ -299,9 +314,7 @@ async function handle(req,res) {
   const confirmation=url.pathname.match(/^\/v1\/trader\/trc20\/orders\/([0-9a-f-]{36})\/verify$/);
   if(req.method==='POST'&&confirmation){
     if(account.role!=='trader')throw issue(403,'Доступ только трейдерам');
-    const body=await parseBody(req);
-    const order=await trc20.confirm(account.id,confirmation[1],String(body.txid||''));
-    return reply(res,200,{order,finance:await financeOf(account)},origin);
+    throw issue(410,'Для пополнения используйте форму TXID');
   }
   if(req.method==='POST'&&url.pathname==='/v1/trader/work-status') {
     if(account.role!=='trader')throw issue(403,'Доступ только трейдеру');
@@ -423,6 +436,17 @@ async function handle(req,res) {
     await storage.set(key('merchant:'+merchant.id),JSON.stringify(merchant));
     await recordAudit('merchant.updated',{id:merchant.id,name,status});
     return reply(res,200,{merchant,paymentProcessingEnabled:false},origin);
+  }
+  if(req.method==='GET'&&url.pathname==='/v1/admin/deposit-requests'){
+    return reply(res,200,{orders:await manualDeposits.ownerList()},origin);
+  }
+  const manualDecision=url.pathname.match(/^\/v1\/admin\/deposit-requests\/([0-9a-f-]{36})\/(approve|reject)$/);
+  if(req.method==='POST'&&manualDecision){
+    const decision=manualDecision[2]==='approve'?'credited':'rejected';
+    const order=await manualDeposits.decide(manualDecision[1],account.id,decision);
+    const trader=await getAcc(order.accountId);
+    await recordAudit('deposit.'+decision,{id:order.id,accountId:order.accountId,username:trader?.username||'',purpose:order.purpose,amountUSDT:order.amountUSDT,owner:account.username});
+    return reply(res,200,{order,finance:trader?await financeOf(trader):null},origin);
   }
   if(req.method==='GET'&&url.pathname==='/v1/admin/trc20/orders'){
     return reply(res,200,{orders:await trc20.ownerList()},origin);
@@ -554,5 +578,6 @@ http.createServer((req,res)=>handle(req,res).catch(err=>{
     tronGridKeyConfigured:Boolean(process.env.TRONGRID_API_KEY),
     persistentAccountsReady:durable.isReady()
   }));
-  trc20.start();
+  // Manual TXID submissions must never trigger automated balance credits.
+  // Historical confirmed TRC20 credits remain readable, but the scanner stays disabled.
 });
