@@ -90,4 +90,29 @@ async function decide(id,ownerId,decision){
  }catch(e){await client.query('ROLLBACK').catch(()=>{});throw e}
  finally{client.release()}
 }
-module.exports={create,balances,list,ownerList,decide,ensure};
+// Owner may credit a trader directly using a real TXID, with the same
+// unique-hash protection and network verification as submitted orders.
+async function ownerCredit(accountId,purpose,amount,txid,ownerId){
+ await ensure();
+ if(!uuid.test(accountId)||!uuid.test(ownerId)||!['working','insurance'].includes(purpose))
+  throw fail(400,'Некорректные данные зачисления');
+ const normalized=String(txid||'').trim().toLowerCase();
+ if(!hash.test(normalized))throw fail(400,'Укажите действительный TXID (64 символа)');
+ const cents=amountCents(amount);
+ const previous=await pool.query('SELECT * FROM onlymatch_manual_deposits WHERE txid=$1',[normalized]);
+ if(previous.rowCount){
+  const record=previous.rows[0];
+  if(record.account_id!==accountId||record.purpose!==purpose||Number(record.amount_cents)!==cents)
+   throw fail(409,'TXID уже принадлежит другой заявке. Проверьте тип депозита и сумму.');
+  return decide(record.id,ownerId,'credited');
+ }
+ if(await legacyUsed(pool,normalized))throw fail(409,'Перевод уже был зачислен ранее');
+ // Check the network before saving an Owner-created application.
+ let proof;
+ try{proof=await verifyTx(normalized,(cents/100).toFixed(2))}
+ catch(e){throw fail(503,'Проверка TRON временно недоступна: '+e.message)}
+ if(proof.status!=='confirmed')throw fail(409,proof.message||'Перевод не подтверждён');
+ const order=await create(accountId,purpose,(cents/100).toFixed(2),normalized);
+ return decide(order.id,ownerId,'credited');
+}
+module.exports={create,balances,list,ownerList,decide,ownerCredit,ensure};
