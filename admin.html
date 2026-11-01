@@ -505,7 +505,7 @@ function date(v){return v?new Date(v).toLocaleString('ru-RU',{day:'2-digit',mont
 function drawTraders(){
  const query=el('trader-search').value.trim().toLowerCase();
  const list=traders.filter(t=>[t.username,t.memo,t.note].some(x=>String(x||'').toLowerCase().includes(query)));
- el('trader-rows').innerHTML=list.map(t=>'<tr><td data-label="Трейдер"><div><span class="name">'+esc(t.username)+'</span><span class="user-id">'+esc(t.id)+'</span></div></td><td data-label="Заметка"><span class="owner-card-note">'+esc(t.note||'—')+'</span></td><td data-label="Memo"><code class="code">'+esc(t.memo||'—')+'</code></td><td data-label="Статус"><span class="owner-pill '+(t.active?'':'off')+'">'+(t.active?'Активен':'Отключён')+'</span></td><td data-label="Действия"><div class="tools"><button class="btn" data-profile="'+esc(t.id)+'">Анкета</button><button class="btn" data-edit="'+esc(t.id)+'">Изменить Memo</button><button class="btn" data-finance="'+esc(t.id)+'">Финансы</button><button class="btn" data-insurance-minimum="'+esc(t.id)+'">Мин. депозит</button><button class="btn" data-password="'+esc(t.id)+'">Пароль</button><button class="btn" data-status="'+esc(t.id)+'">'+(t.active?'Отключить':'Включить')+'</button></div></td></tr>').join('')||'<tr><td colspan="5" class="empty">Трейдеров нет</td></tr>';
+ el('trader-rows').innerHTML=list.map(t=>'<tr><td data-label="Трейдер"><div><span class="name">'+esc(t.username)+'</span><span class="user-id">'+esc(t.id)+'</span></div></td><td data-label="Заметка"><span class="owner-card-note">'+esc(t.note||'—')+'</span></td><td data-label="Memo"><code class="code">'+esc(t.memo||'—')+'</code></td><td data-label="Статус"><span class="owner-pill '+(t.active?'':'off')+'">'+(t.active?'Активен':'Отключён')+'</span></td><td data-label="Действия"><div class="tools"><button class="btn" data-profile="'+esc(t.id)+'">Анкета</button><button class="btn" data-edit="'+esc(t.id)+'">Изменить Memo</button><button class="btn" data-finance="'+esc(t.id)+'">Финансы</button><button class="btn primary" data-credit="'+esc(t.id)+'">Зачислить</button><button class="btn" data-insurance-minimum="'+esc(t.id)+'">Страховой депозит</button><button class="btn" data-password="'+esc(t.id)+'">Пароль</button><button class="btn" data-status="'+esc(t.id)+'">'+(t.active?'Отключить':'Включить')+'</button></div></td></tr>').join('')||'<tr><td colspan="5" class="empty">Трейдеров нет</td></tr>';
 }
 function renderDepositRequests(){
  const pending=depositRequests.filter(r=>r.status==='pending').length;
@@ -530,7 +530,7 @@ function drawFinance(){
   const f=t.finance||{},insurance=Number(f.confirmedInsuranceUSDT||0),minimum=Number(f.minimumInsuranceUSDT??500),shortfall=Number(f.shortfallUSDT??Math.max(0,minimum-insurance));
   const allowed=!!f.workEligible,working=allowed&&!!f.working;
   const status=!allowed?'Недостаточно депозита':working?'В работе':'Допущен';
-  return '<tr><td data-label="Трейдер"><strong class="name">'+esc(t.username)+'</strong><span class="user-id">'+esc(t.id)+'</span></td><td data-label="Memo"><code class="code">'+esc(t.memo||'—')+'</code></td><td data-label="Страховой депозит"><strong>'+insurance.toFixed(2)+' USDT</strong></td><td data-label="Минимум">'+minimum.toFixed(2)+' USDT</td><td data-label="Не хватает">'+shortfall.toFixed(2)+' USDT</td><td data-label="Рабочий статус"><span class="owner-pill '+(allowed?'':'off')+'">'+status+'</span></td><td data-label="Действия"><div class="tools"><button type="button" class="btn" data-finance="'+esc(t.id)+'">Подробнее</button><button type="button" class="btn" data-insurance-minimum="'+esc(t.id)+'">Изменить минимум</button></div></td></tr>';
+  return '<tr><td data-label="Трейдер"><strong class="name">'+esc(t.username)+'</strong><span class="user-id">'+esc(t.id)+'</span></td><td data-label="Memo"><code class="code">'+esc(t.memo||'—')+'</code></td><td data-label="Страховой депозит"><strong>'+insurance.toFixed(2)+' USDT</strong></td><td data-label="Минимум">'+minimum.toFixed(2)+' USDT</td><td data-label="Не хватает">'+shortfall.toFixed(2)+' USDT</td><td data-label="Рабочий статус"><span class="owner-pill '+(allowed?'':'off')+'">'+status+'</span></td><td data-label="Действия"><div class="tools"><button type="button" class="btn" data-finance="'+esc(t.id)+'">Подробнее</button><button type="button" class="btn primary" data-credit="'+esc(t.id)+'">Зачислить</button><button type="button" class="btn" data-insurance-minimum="'+esc(t.id)+'">Изменить минимум</button></div></td></tr>';
  }).join('');
  el('finance-rows').innerHTML=rows||'<tr><td colspan="7" class="empty">Трейдеров пока нет</td></tr>';
 }
@@ -539,9 +539,29 @@ function infoDialog(title,body){
 }
 async function openFinance(trader){
  const details=await api('/v1/admin/traders/'+encodeURIComponent(trader.id)+'/finance');
- const f=details.finance,amount=Number(f.confirmedInsuranceUSDT||0),needed=Number(f.shortfallUSDT||0),minimum=Number(f.minimumInsuranceUSDT??500);
+ const f=details.finance,insurance=Number(f.confirmedInsuranceUSDT||0),needed=Number(f.shortfallUSDT||0),minimum=Number(f.minimumInsuranceUSDT??500);
  infoDialog('Финансы · '+trader.username,
-  '<div class="info-list"><p><strong>Трейдер:</strong> '+esc(trader.username)+'</p><p><strong>Учетная запись:</strong> <code>'+esc(trader.id)+'</code></p><p><strong>Memo:</strong> <code class="code">'+esc(trader.memo||'—')+'</code></p><p><strong>Подтверждённый страховой депозит:</strong> '+amount.toFixed(2)+' USDT</p><p><strong>Индивидуальный минимум:</strong> '+minimum.toFixed(2)+' USDT</p><p><strong>Не хватает:</strong> '+needed.toFixed(2)+' USDT</p><p><strong>Допуск к работе:</strong> '+(f.workEligible?'Разрешён':'Заблокирован')+'</p><p><strong>Сейчас:</strong> '+(f.working?'В работе':'Не в работе')+'</p></div><p class="description">'+esc(f.note||'Автоматическая проверка поступлений не подключена.')+'</p><button class="btn primary" type="button" data-insurance-edit="'+esc(trader.id)+'">Изменить минимальный депозит</button>');
+  '<div class="info-list"><p><strong>Трейдер:</strong> '+esc(trader.username)+'</p><p><strong>Рабочий баланс:</strong> '+Number(f.mainBalanceUSDT||0).toFixed(2)+' USDT</p><p><strong>Подтверждённый страховой депозит:</strong> '+insurance.toFixed(2)+' USDT</p><p><strong>Минимум для работы:</strong> '+minimum.toFixed(2)+' USDT</p><p><strong>Не хватает:</strong> '+needed.toFixed(2)+' USDT</p><p><strong>Допуск:</strong> '+(f.workEligible?'Разрешён':'Заблокирован')+'</p></div>'+
+  '<div class="tools" style="margin-top:16px"><button class="btn primary" type="button" data-credit-open="'+esc(trader.id)+'">Зачислить USDT</button><button class="btn" type="button" data-insurance-edit="'+esc(trader.id)+'">Изменить страховой минимум</button></div>');
+}
+function openTraderCredit(trader,preset='working'){
+ const f=trader.finance||{};
+ dialog('Зачисление USDT · '+trader.username,
+  '<p class="description">Укажите реальный TXID перевода USDT TRC20. Сервер проверит транзакцию и зачислит сумму на выбранный баланс.</p>'+
+  '<div class="info-list"><p><strong>Рабочий баланс:</strong> '+Number(f.mainBalanceUSDT||0).toFixed(2)+' USDT</p><p><strong>Страховой депозит:</strong> '+Number(f.confirmedInsuranceUSDT||0).toFixed(2)+' USDT</p></div>'+
+  '<label class="owner-field">Зачислить на<select name="purpose" required><option value="working" '+(preset==='working'?'selected':'')+'>Рабочий баланс</option><option value="insurance" '+(preset==='insurance'?'selected':'')+'>Страховой депозит</option></select></label>'+
+  '<label class="owner-field">Сумма, USDT<input name="amountUSDT" type="number" inputmode="decimal" min="0.01" max="100000" step="0.01" placeholder="100.00" required></label>'+
+  '<label class="owner-field">TXID перевода<input name="txid" type="text" maxlength="64" minlength="64" autocapitalize="off" autocomplete="off" spellcheck="false" pattern="[a-fA-F0-9]{64}" placeholder="64 символа" required></label>'+
+  '<p class="owner-card-note">Баланс изменится только после подтверждения перевода в сети TRON. Повторное зачисление одного TXID блокируется.</p>',
+  async form=>{
+   const purpose=String(form.get('purpose')||'');
+   const amountUSDT=String(form.get('amountUSDT')||'').trim();
+   const txid=String(form.get('txid')||'').trim();
+   if(!['working','insurance'].includes(purpose)||!/^[a-f0-9]{64}$/i.test(txid))
+    throw Error('Проверьте тип депозита и TXID');
+   await api('/v1/admin/traders/'+encodeURIComponent(trader.id)+'/credit-deposit','POST',{purpose,amountUSDT,txid});
+   await loadDepositRequests().catch(()=>{});
+  });
 }
 function openInsuranceMinimum(trader){
  const current=Number(trader.finance?.minimumInsuranceUSDT??500);
@@ -580,14 +600,16 @@ function dialog(title,body,onSubmit){
  };
 }
 el('trader-rows').onclick=async e=>{
- const t=e.target.closest('[data-edit],[data-password],[data-status],[data-profile],[data-finance],[data-insurance-minimum]');
+ const t=e.target.closest('[data-edit],[data-password],[data-status],[data-profile],[data-finance],[data-credit],[data-insurance-minimum]');
  if(!t)return;
- const id=t.dataset.edit||t.dataset.password||t.dataset.status||t.dataset.profile||t.dataset.finance||t.dataset.insuranceMinimum;
+ const id=t.dataset.edit||t.dataset.password||t.dataset.status||t.dataset.profile||t.dataset.finance||t.dataset.credit||t.dataset.insuranceMinimum;
  const trader=traders.find(x=>x.id===id);if(!trader)return;
  if(t.hasAttribute('data-profile')){
   infoDialog('Анкета · '+trader.username,'<p><strong>Логин:</strong> '+esc(trader.username)+'</p><p><strong>ID:</strong> '+esc(trader.id)+'</p><p><strong>Memo:</strong> '+esc(trader.memo||'—')+'</p><p><strong>Заметка:</strong> '+esc(trader.note||'—')+'</p><p><strong>Аккаунт:</strong> '+(trader.active?'Активен':'Отключён')+'</p><p><strong>Создан:</strong> '+date(trader.createdAt)+'</p>');
  }else if(t.hasAttribute('data-finance')){
   try{await openFinance(trader)}catch(err){alert(err.message)}
+ }else if(t.hasAttribute('data-credit')){
+  openTraderCredit(trader);
  }else if(t.hasAttribute('data-insurance-minimum')){
   openInsuranceMinimum(trader);
  }else if(t.hasAttribute('data-edit')){
@@ -610,6 +632,8 @@ el('owner-password-btn').onclick=()=>{
  async f=>{await api('/v1/auth/change-password','POST',{currentPassword:f.get('current'),newPassword:f.get('next')});sessionStorage.removeItem(TOKEN);location.reload()});
 };
 el('dialog-root').onclick=e=>{
+ const credit=e.target.closest('[data-credit-open]');
+ if(credit){const trader=traders.find(x=>x.id===credit.dataset.creditOpen);if(trader)openTraderCredit(trader);return;}
  const edit=e.target.closest('[data-insurance-edit]');
  if(edit){const trader=traders.find(x=>x.id===edit.dataset.insuranceEdit);if(trader)openInsuranceMinimum(trader);return;}
  if(e.target.closest('[data-close-dialog]')||e.target.hasAttribute('data-close-overlay'))el('dialog-root').replaceChildren();
@@ -636,7 +660,7 @@ setInterval(()=>{
  if(document.visibilityState==='visible'&&document.documentElement.classList.contains('owner-authenticated')&&activeTab==='finance')
   loadDepositRequests().catch(()=>{});
 },12000);
-el('finance-rows').onclick=async e=>{const btn=e.target.closest('[data-finance],[data-insurance-minimum]');if(!btn)return;const trader=traders.find(x=>x.id===(btn.dataset.finance||btn.dataset.insuranceMinimum));if(!trader)return;if(btn.hasAttribute('data-insurance-minimum')){openInsuranceMinimum(trader);return;}try{await openFinance(trader)}catch(err){alert(err.message)}};
+el('finance-rows').onclick=async e=>{const btn=e.target.closest('[data-finance],[data-credit],[data-insurance-minimum]');if(!btn)return;const trader=traders.find(x=>x.id===(btn.dataset.finance||btn.dataset.credit||btn.dataset.insuranceMinimum));if(!trader)return;if(btn.hasAttribute('data-credit')){openTraderCredit(trader);return;}if(btn.hasAttribute('data-insurance-minimum')){openInsuranceMinimum(trader);return;}try{await openFinance(trader)}catch(err){alert(err.message)}};
 el('trader-search').oninput=drawTraders;
 document.addEventListener('keydown',e=>{if(e.key==='Escape')el('dialog-root').replaceChildren()});
 
@@ -650,7 +674,7 @@ function drawDirectory(){
  '<td data-label="Memo"><code class="code">'+esc(t.memo||'—')+'</code></td>'+
  '<td data-label="Минимальный депозит">'+Number(t.finance?.minimumInsuranceUSDT??500).toFixed(2)+' USDT</td>'+ 
   '<td data-label="Доступ"><span class="owner-pill '+(t.active?'':'off')+'">'+(t.active?'Разрешён':'Отключён')+'</span></td>'+
- '<td data-label="Действия"><div class="tools"><button class="btn" data-profile="'+esc(t.id)+'">Анкета</button><button class="btn" data-edit="'+esc(t.id)+'">Memo</button><button class="btn" data-finance="'+esc(t.id)+'">Финансы</button><button class="btn" data-insurance-minimum="'+esc(t.id)+'">Мин. депозит</button><button class="btn" data-password="'+esc(t.id)+'">Пароль</button><button class="btn" data-status="'+esc(t.id)+'">'+(t.active?'Отключить':'Включить')+'</button></div></td></tr>'
+ '<td data-label="Действия"><div class="tools"><button class="btn" data-profile="'+esc(t.id)+'">Анкета</button><button class="btn" data-edit="'+esc(t.id)+'">Memo</button><button class="btn" data-finance="'+esc(t.id)+'">Финансы</button><button class="btn primary" data-credit="'+esc(t.id)+'">Зачислить</button><button class="btn" data-insurance-minimum="'+esc(t.id)+'">Страховой депозит</button><button class="btn" data-password="'+esc(t.id)+'">Пароль</button><button class="btn" data-status="'+esc(t.id)+'">'+(t.active?'Отключить':'Включить')+'</button></div></td></tr>'
  ).join('')||'<tr><td class="empty" colspan="6">Нет трейдеров</td></tr>';
 }
 function updateOverview(){
