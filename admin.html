@@ -265,8 +265,8 @@ html[data-om-theme="graphite"] .om-nav-item.active .om-nav-icon{background:#344b
       </section>
       <section class="card owner-tab-panel" id="tab-finance" hidden>
         <div class="card-head"><h2>Финансы трейдеров</h2><button class="btn" id="refresh-finance" type="button">Обновить балансы</button></div>
-        <p class="description">Для каждого выданного аккаунта отображается только подтверждённый сервером страховой депозит. Рабочий статус разрешён при сумме от <strong>500 USDT</strong>. Локальные деньги и суммы незавершённых заявок в расчёт не входят.</p>
-        <div class="tablewrap"><table><thead><tr><th>Трейдер</th><th>Memo</th><th>Страховой депозит</th><th>До допуска</th><th>Рабочий статус</th><th>Действия</th></tr></thead><tbody id="finance-rows"><tr><td colspan="6" class="empty">Загрузка…</td></tr></tbody></table></div>
+        <p class="description">Для каждого трейдера можно задать свой минимальный страховой депозит. По умолчанию — <strong>500 USDT</strong>. В допуске учитываются только подтверждённые сервером средства, а не локальные суммы или неподтверждённые заявки.</p>
+        <div class="tablewrap"><table><thead><tr><th>Трейдер</th><th>Memo</th><th>Страховой депозит</th><th>Минимум</th><th>До допуска</th><th>Рабочий статус</th><th>Действия</th></tr></thead><tbody id="finance-rows"><tr><td colspan="7" class="empty">Загрузка…</td></tr></tbody></table></div>
         <p class="owner-card-note" style="margin-top:15px">Подтверждение депозитов через платёжного провайдера ещё не подключено. До появления подтверждённой записи баланс составляет 0 USDT, работа остаётся заблокированной. Отображаемые суммы нельзя считать независимым доказательством получения средств.</p>
       </section>
       
@@ -297,8 +297,8 @@ html[data-om-theme="graphite"] .om-nav-item.active .om-nav-icon{background:#344b
 </section>
 <section class="card owner-tab-panel" id="tab-traders" hidden>
   <div class="card-head"><h2>Аккаунты трейдеров</h2><div class="actions"><input id="om-directory-search" class="search" placeholder="Логин, ID, заметка" aria-label="Поиск трейдеров"><button class="btn primary" data-quick-tab="add" type="button">+ Новый трейдер</button><button class="btn" id="om-export-traders" type="button">Экспорт CSV</button></div></div>
-  <p class="description">Управление аккаунтами: просмотр анкеты, смена пароля, блокировка или восстановление доступа, переход к Memo и финансам.</p>
-  <div class="tablewrap"><table><thead><tr><th>Трейдер</th><th>Заметка</th><th>Memo</th><th>Доступ</th><th>Действия</th></tr></thead><tbody id="om-directory-rows"><tr><td colspan="5" class="empty">Загрузка…</td></tr></tbody></table></div>
+  <p class="description">Управление аккаунтами: просмотр анкеты, смена пароля, индивидуальный минимальный страховой депозит, блокировка доступа, Memo и финансы.</p>
+  <div class="tablewrap"><table><thead><tr><th>Трейдер</th><th>Заметка</th><th>Memo</th><th>Мин. депозит</th><th>Доступ</th><th>Действия</th></tr></thead><tbody id="om-directory-rows"><tr><td colspan="6" class="empty">Загрузка…</td></tr></tbody></table></div>
 </section>
 <section class="card owner-tab-panel" id="tab-payin" hidden>
   <div class="card-head"><h2>Pay-In · входящие операции</h2><span class="om-tag">Контроль заявок</span></div>
@@ -502,25 +502,25 @@ function date(v){return v?new Date(v).toLocaleString('ru-RU',{day:'2-digit',mont
 function drawTraders(){
  const query=el('trader-search').value.trim().toLowerCase();
  const list=traders.filter(t=>[t.username,t.memo,t.note].some(x=>String(x||'').toLowerCase().includes(query)));
- el('trader-rows').innerHTML=list.map(t=>'<tr><td data-label="Трейдер"><div><span class="name">'+esc(t.username)+'</span><span class="user-id">'+esc(t.id)+'</span></div></td><td data-label="Заметка"><span class="owner-card-note">'+esc(t.note||'—')+'</span></td><td data-label="Memo"><code class="code">'+esc(t.memo||'—')+'</code></td><td data-label="Статус"><span class="owner-pill '+(t.active?'':'off')+'">'+(t.active?'Активен':'Отключён')+'</span></td><td data-label="Действия"><div class="tools"><button class="btn" data-profile="'+esc(t.id)+'">Анкета</button><button class="btn" data-edit="'+esc(t.id)+'">Изменить Memo</button><button class="btn" data-finance="'+esc(t.id)+'">Финансы</button><button class="btn" data-password="'+esc(t.id)+'">Пароль</button><button class="btn" data-status="'+esc(t.id)+'">'+(t.active?'Отключить':'Включить')+'</button></div></td></tr>').join('')||'<tr><td colspan="5" class="empty">Трейдеров нет</td></tr>';
+ el('trader-rows').innerHTML=list.map(t=>'<tr><td data-label="Трейдер"><div><span class="name">'+esc(t.username)+'</span><span class="user-id">'+esc(t.id)+'</span></div></td><td data-label="Заметка"><span class="owner-card-note">'+esc(t.note||'—')+'</span></td><td data-label="Memo"><code class="code">'+esc(t.memo||'—')+'</code></td><td data-label="Статус"><span class="owner-pill '+(t.active?'':'off')+'">'+(t.active?'Активен':'Отключён')+'</span></td><td data-label="Действия"><div class="tools"><button class="btn" data-profile="'+esc(t.id)+'">Анкета</button><button class="btn" data-edit="'+esc(t.id)+'">Изменить Memo</button><button class="btn" data-finance="'+esc(t.id)+'">Финансы</button><button class="btn" data-insurance-minimum="'+esc(t.id)+'">Мин. депозит</button><button class="btn" data-password="'+esc(t.id)+'">Пароль</button><button class="btn" data-status="'+esc(t.id)+'">'+(t.active?'Отключить':'Включить')+'</button></div></td></tr>').join('')||'<tr><td colspan="5" class="empty">Трейдеров нет</td></tr>';
 }
 function drawFinance(){
  const rows=traders.map(t=>{
-  const f=t.finance||{},insurance=Number(f.confirmedInsuranceUSDT||0),shortfall=Number(f.shortfallUSDT||500);
+  const f=t.finance||{},insurance=Number(f.confirmedInsuranceUSDT||0),minimum=Number(f.minimumInsuranceUSDT??500),shortfall=Number(f.shortfallUSDT??Math.max(0,minimum-insurance));
   const allowed=!!f.workEligible,working=allowed&&!!f.working;
   const status=!allowed?'Недостаточно депозита':working?'В работе':'Допущен';
-  return '<tr><td data-label="Трейдер"><strong class="name">'+esc(t.username)+'</strong><span class="user-id">'+esc(t.id)+'</span></td><td data-label="Memo"><code class="code">'+esc(t.memo||'—')+'</code></td><td data-label="Страховой депозит"><strong>'+insurance.toFixed(2)+' USDT</strong></td><td data-label="Не хватает">'+shortfall.toFixed(2)+' USDT</td><td data-label="Рабочий статус"><span class="owner-pill '+(allowed?'':'off')+'">'+status+'</span></td><td data-label="Действия"><button type="button" class="btn" data-finance="'+esc(t.id)+'">Подробнее</button></td></tr>';
+  return '<tr><td data-label="Трейдер"><strong class="name">'+esc(t.username)+'</strong><span class="user-id">'+esc(t.id)+'</span></td><td data-label="Memo"><code class="code">'+esc(t.memo||'—')+'</code></td><td data-label="Страховой депозит"><strong>'+insurance.toFixed(2)+' USDT</strong></td><td data-label="Минимум">'+minimum.toFixed(2)+' USDT</td><td data-label="Не хватает">'+shortfall.toFixed(2)+' USDT</td><td data-label="Рабочий статус"><span class="owner-pill '+(allowed?'':'off')+'">'+status+'</span></td><td data-label="Действия"><div class="tools"><button type="button" class="btn" data-finance="'+esc(t.id)+'">Подробнее</button><button type="button" class="btn" data-insurance-minimum="'+esc(t.id)+'">Изменить минимум</button></div></td></tr>';
  }).join('');
- el('finance-rows').innerHTML=rows||'<tr><td colspan="6" class="empty">Трейдеров пока нет</td></tr>';
+ el('finance-rows').innerHTML=rows||'<tr><td colspan="7" class="empty">Трейдеров пока нет</td></tr>';
 }
 function infoDialog(title,body){
  el('dialog-root').innerHTML='<div class="overlay" data-close-overlay><section class="dialog" role="dialog" aria-modal="true" aria-label="'+esc(title)+'"><div class="dialog-top"><h2>'+esc(title)+'</h2><button type="button" class="x" data-close-dialog>×</button></div>'+body+'<div class="form-actions"><button type="button" class="btn" data-close-dialog>Закрыть</button></div></section></div>';
 }
 async function openFinance(trader){
  const details=await api('/v1/admin/traders/'+encodeURIComponent(trader.id)+'/finance');
- const f=details.finance,amount=Number(f.confirmedInsuranceUSDT||0),needed=Number(f.shortfallUSDT||0);
+ const f=details.finance,amount=Number(f.confirmedInsuranceUSDT||0),needed=Number(f.shortfallUSDT||0),minimum=Number(f.minimumInsuranceUSDT??500);
  infoDialog('Финансы · '+trader.username,
-  '<div class="info-list"><p><strong>Трейдер:</strong> '+esc(trader.username)+'</p><p><strong>Учетная запись:</strong> <code>'+esc(trader.id)+'</code></p><p><strong>Memo:</strong> <code class="code">'+esc(trader.memo||'—')+'</code></p><p><strong>Подтверждённый страховой депозит:</strong> '+amount.toFixed(2)+' USDT</p><p><strong>Минимальный депозит:</strong> 500,00 USDT</p><p><strong>Не хватает:</strong> '+needed.toFixed(2)+' USDT</p><p><strong>Допуск к работе:</strong> '+(f.workEligible?'Разрешён':'Заблокирован')+'</p><p><strong>Сейчас:</strong> '+(f.working?'В работе':'Не в работе')+'</p></div><p class="description">'+esc(f.note||'Автоматическая проверка поступлений не подключена.')+'</p>');
+  '<div class="info-list"><p><strong>Трейдер:</strong> '+esc(trader.username)+'</p><p><strong>Учетная запись:</strong> <code>'+esc(trader.id)+'</code></p><p><strong>Memo:</strong> <code class="code">'+esc(trader.memo||'—')+'</code></p><p><strong>Подтверждённый страховой депозит:</strong> '+amount.toFixed(2)+' USDT</p><p><strong>Индивидуальный минимум:</strong> '+minimum.toFixed(2)+' USDT</p><p><strong>Не хватает:</strong> '+needed.toFixed(2)+' USDT</p><p><strong>Допуск к работе:</strong> '+(f.workEligible?'Разрешён':'Заблокирован')+'</p><p><strong>Сейчас:</strong> '+(f.working?'В работе':'Не в работе')+'</p></div><p class="description">'+esc(f.note||'Автоматическая проверка поступлений не подключена.')+'</p>');
 }
 async function loadTraders(){
  const d=await api('/v1/admin/traders');
@@ -586,9 +586,10 @@ function drawDirectory(){
  '<tr><td data-label="Трейдер"><div><span class="name">'+esc(t.username)+'</span><span class="user-id">'+esc(t.id)+'</span></div></td>'+
  '<td data-label="Заметка"><span class="owner-card-note">'+esc(t.note||'—')+'</span></td>'+
  '<td data-label="Memo"><code class="code">'+esc(t.memo||'—')+'</code></td>'+
- '<td data-label="Доступ"><span class="owner-pill '+(t.active?'':'off')+'">'+(t.active?'Разрешён':'Отключён')+'</span></td>'+
- '<td data-label="Действия"><div class="tools"><button class="btn" data-profile="'+esc(t.id)+'">Анкета</button><button class="btn" data-edit="'+esc(t.id)+'">Memo</button><button class="btn" data-finance="'+esc(t.id)+'">Финансы</button><button class="btn" data-password="'+esc(t.id)+'">Пароль</button><button class="btn" data-status="'+esc(t.id)+'">'+(t.active?'Отключить':'Включить')+'</button></div></td></tr>'
- ).join('')||'<tr><td class="empty" colspan="5">Нет трейдеров</td></tr>';
+ '<td data-label="Минимальный депозит">'+Number(t.finance?.minimumInsuranceUSDT??500).toFixed(2)+' USDT</td>'+ 
+  '<td data-label="Доступ"><span class="owner-pill '+(t.active?'':'off')+'">'+(t.active?'Разрешён':'Отключён')+'</span></td>'+
+ '<td data-label="Действия"><div class="tools"><button class="btn" data-profile="'+esc(t.id)+'">Анкета</button><button class="btn" data-edit="'+esc(t.id)+'">Memo</button><button class="btn" data-finance="'+esc(t.id)+'">Финансы</button><button class="btn" data-insurance-minimum="'+esc(t.id)+'">Мин. депозит</button><button class="btn" data-password="'+esc(t.id)+'">Пароль</button><button class="btn" data-status="'+esc(t.id)+'">'+(t.active?'Отключить':'Включить')+'</button></div></td></tr>'
+ ).join('')||'<tr><td class="empty" colspan="6">Нет трейдеров</td></tr>';
 }
 function updateOverview(){
  const count=traders.length,active=traders.filter(t=>t.active).length;
@@ -738,8 +739,8 @@ document.querySelectorAll('[data-quick-tab]').forEach(b=>b.onclick=()=>switchTab
 el('om-directory-rows').onclick=el('trader-rows').onclick;
 el('om-directory-search').oninput=drawDirectory;
 el('om-export-traders').onclick=()=>{
- saveCsv([['Логин','ID','Memo','Активен','Заметка','Дата регистрации'],
-  ...traders.map(t=>[t.username,t.id,t.memo||'',t.active?'Да':'Нет',t.note||'',t.createdAt||''])],
+ saveCsv([['Логин','ID','Memo','Минимальный страховой депозит USDT','Активен','Заметка','Дата регистрации'],
+  ...traders.map(t=>[t.username,t.id,t.memo||'',Number(t.finance?.minimumInsuranceUSDT??500),t.active?'Да':'Нет',t.note||'',t.createdAt||''])],
   'onlymatch-traders.csv');
 };
 el('om-refresh-activity').onclick=()=>loadActivity().catch(e=>alert(e.message));
