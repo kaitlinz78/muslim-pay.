@@ -548,5 +548,11 @@ http.createServer((req,res)=>handle(req,res).catch(err=>{
 })).listen(PORT,'0.0.0.0',()=>{
   console.log('Ice Pay accounts API HTTP started on',PORT);
   initialize().catch(e=>{ready=false;console.error('Ice Pay accounts backend not ready:',e.message)});
+  console.info('[OnlyMatch TRC20 readiness]',JSON.stringify({
+    liveRequested:process.env.ONLYMATCH_TRC20_LIVE==='true',
+    databaseConfigured:Boolean(process.env.DATABASE_URL),
+    tronGridKeyConfigured:Boolean(process.env.TRONGRID_API_KEY),
+    persistentAccountsReady:durable.isReady()
+  }));
   trc20.start();
 });
