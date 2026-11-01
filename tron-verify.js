@@ -54,7 +54,7 @@ function inspectReceipt(receipt, txid, expectedAmount) {
     matched=transfers.filter(t=>{const [a,b]=t.amount.split('.');return BigInt(a)*1000000n+BigInt(b)===n;});
   }
   if(!matched.length)return {status:'amount_mismatch',message:'Перевод найден, но сумма отличается от суммы заявки',transfers};
-  return {status:'confirmed',message:'Перевод USDT подтверждён сетью TRON. Зачисление на баланс пока не подключено.',txid,transfers:matched,contract:USDT_CONTRACT,to:TREASURY};
+  return {status:'confirmed',message:'Перевод USDT подтверждён сетью TRON',txid,transfers:matched,blockTimeStamp:receipt.blockTimeStamp,contract:USDT_CONTRACT,to:TREASURY};
 }
 async function verifyTx(txid, expectedAmount) {
   if(typeof txid!=='string'|| !/^[0-9a-fA-F]{64}$/.test(txid))return {status:'invalid_txid',message:'Хэш транзакции должен содержать 64 шестнадцатеричных символа'};
