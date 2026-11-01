@@ -477,6 +477,18 @@ async function handle(req,res) {
     if(!trader||trader.role!=='trader')throw issue(404,'Трейдер не найден');
     return reply(res,200,{trader:toPublic(trader),finance:await financeOf(trader)},origin);
   }
+  const ownerCreditRoute=url.pathname.match(/^\/v1\/admin\/traders\/([a-f0-9-]{36})\/credit-deposit$/);
+  if(req.method==='POST'&&ownerCreditRoute){
+    const trader=await getAcc(ownerCreditRoute[1]);
+    if(!trader||trader.role!=='trader')throw issue(404,'Трейдер не найден');
+    const data=await parseBody(req);
+    const order=await manualDeposits.ownerCredit(trader.id,data.purpose,data.amountUSDT,data.txid,account.id);
+    await recordAudit('deposit.owner_credit',{
+      id:order.id,accountId:trader.id,username:trader.username,
+      amountUSDT:order.amountUSDT,purpose:order.purpose,txid:order.txid,owner:account.username
+    }).catch(e=>console.warn('[OnlyMatch owner credit audit]',e.message));
+    return reply(res,200,{ok:true,order,finance:await financeOf(trader)},origin);
+  }
   const insuranceMinimumRoute=url.pathname.match(/^\/v1\/admin\/traders\/([a-f0-9-]{36})\/insurance-minimum$/);
   if(req.method==='PATCH'&&insuranceMinimumRoute){
     const trader=await getAcc(insuranceMinimumRoute[1]);
