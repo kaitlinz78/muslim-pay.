@@ -499,7 +499,7 @@ function tabBar(name,items){return `<div class="segmented" role="tablist">${item
 function orderList(which){let q=(searches[which]||'').toLowerCase(), status=tabs[which]||'all';let data=state.orders.filter(x=>which==='all'||x.kind===(which==='payin'?'Pay-In':'Pay-Out'));if(status!=='all')data=data.filter(x=>x.status===status);if(q)data=data.filter(x=>(x.id+' '+x.currency+' '+x.amount).toLowerCase().includes(q));return `<div class="table-wrap"><table class="data-table"><thead><tr><th>№ заявки</th><th>Тип</th><th>Сумма</th><th>Статус</th><th>Создано</th><th>Детали</th></tr></thead><tbody>${data.map(x=>`<tr><td>${esc(x.id)}</td><td>${esc(x.kind)}</td><td><strong>${money(x.amount,0)} ${esc(x.currency)}</strong></td><td>${statusTag(x.status)}</td><td>${dateFmt(x.created)}</td><td><button class="table-link" data-detail="order:${esc(x.id)}">Открыть</button></td></tr>`).join('')||`<tr><td colspan="6" style="text-align:center;color:var(--muted);padding:35px">Нет заявок по заданным фильтрам</td></tr>`}</tbody></table></div>`}
 function transactions(which){return `${title(which==='payin'?'Pay-In':'Pay-Out')}<div class="action-row"><button class="secondary-button" data-export="${which}">${icon('download')} Экспорт CSV</button></div><div class="section-card"><div class="section-header"><h2>История ${which==='payin'?'Pay-In':'Pay-Out'}</h2><span class="volume-small">Всего: ${state.orders.filter(x=>x.kind===(which==='payin'?'Pay-In':'Pay-Out')).length}</span></div><div class="filters">${tabBar(which,[['all','Все'],['pending','Активные'],['success','Успешные'],['expired','Истекшие']])}<input type="search" data-search="${which}" value="${esc(searches[which]||'')}" placeholder="Поиск по номеру и сумме"></div>${orderList(which)}</div>`}
 function requisites(){const active=state.records.filter(r=>r.status==='active').length;let list=(tabs.requisites==='all'?state.records:state.records.filter(r=>r.status===(tabs.requisites||'all')));let q=(searches.requisites||'').toLowerCase();if(q)list=list.filter(r=>(r.name+' '+r.type+' '+r.detail+' '+r.holder).toLowerCase().includes(q));if(selects.reqtype&&selects.reqtype!=='all')list=list.filter(r=>r.type===selects.reqtype);if(selects.reqstatus&&selects.reqstatus!=='all')list=list.filter(r=>r.status===selects.reqstatus);return `${title('Реквизиты')}<div class="action-row"><button class="gradient-button" data-action="add-requisite">Создать реквизиты</button></div><div class="mini-card-grid"><div class="mini-card"><strong>${state.records.length}</strong><span>Всего реквизитов</span></div><div class="mini-card"><strong>${active}</strong><span>Активных</span></div></div><div class="section-card"><div style="margin-bottom:15px">${tabBar('requisites',[['all','Все'],['active','Активные'],['inactive','Неактивные'],['archived','Архив']])}</div><div class="filters"><input data-search="requisites" type="search" placeholder="Поиск по названию, реквизиту, ФИО, банку..." value="${esc(searches.requisites||'')}"><select data-select="reqtype"><option value="all">Все типы</option><option value="Банковская карта" ${selects.reqtype==='Банковская карта'?'selected':''}>Банковская карта</option><option value="СБП" ${selects.reqtype==='СБП'?'selected':''}>СБП</option></select><select data-select="reqstatus"><option value="all">Все статусы</option><option value="active" ${selects.reqstatus==='active'?'selected':''}>Активные</option><option value="inactive" ${selects.reqstatus==='inactive'?'selected':''}>Неактивные</option><option value="archived" ${selects.reqstatus==='archived'?'selected':''}>Архивные</option></select></div><div class="table-wrap om-req-list"><table class="data-table"><thead><tr><th>Название</th><th>Тип</th><th>Данные</th><th>Владелец</th><th>Статус</th><th style="text-align:right">Действия</th></tr></thead><tbody>${list.map(r=>`<tr><td><button type="button" class="om-req-name" data-detail="req:${esc(r.id)}">${esc(r.name)}</button>${Number.isSafeInteger(r.minPaymentRub)&&Number.isSafeInteger(r.maxPaymentRub)?`<small class="om-req-hint">${money(r.minPaymentRub,0)}–${money(r.maxPaymentRub,0)} ₽ · ${Number.isSafeInteger(r.totalLimitRub)?'общий лимит '+money(r.totalLimitRub,0)+' ₽ · ':''}до ${money(r.maxActiveOrders,0)} активных ордеров</small>`:""}</td><td>${esc(r.type)}</td><td>${esc(r.detail)}</td><td>${esc(r.holder||'—')}</td><td>${statusTag(r.status)}</td><td><div class="om-req-row-actions"><label class="om-req-toggle" style="${r.status==='archived'?'display:none':''}" title="Включить или выключить реквизит"><span>${r.status==='active'?'Активен':'Неактивен'}</span><input type="checkbox" class="switch-input" data-requisite-toggle="${esc(r.id)}" aria-label="Рабочий статус реквизита ${esc(r.name)}" ${r.status==='active'?'checked':''}><span class="switch" aria-hidden="true"></span></label><button type="button" class="om-req-edit" style="${r.status==='archived'?'display:none':''}" data-requisite-edit="${esc(r.id)}">Редактировать</button><button type="button" class="om-req-edit" style="${r.status==='archived'?'':'display:none'}" data-requisite-restore="${esc(r.id)}">Восстановить</button>${r.status==='archived'?`<button class="om-req-delete" type="button" data-requisite-delete="${esc(r.id)}">Удалить</button>`:''}</div></td></tr>`).join('')||'<tr><td colspan="6" style="padding:35px;text-align:center;color:var(--muted)">Реквизиты не найдены</td></tr>'}</tbody></table></div></div>`}
-function wallet(){return `${title('Финансы')}<div class="wallet-actions"><button class="gradient-button" data-action="deposit">${icon('plus')} Пополнить USDT TRC20</button><button class="gradient-button" data-action="withdraw">Запросить вывод</button></div><div class="ice-ton-wallet-caption">${confirmedFinance?.depositAutoCreditEnabled?'Баланс USDT учитывает подтверждённые зачисления TRC20.':'Приём пополнений TRC20 сейчас недоступен. Не отправляйте средства без заявки.'} ${esc(financeGateText())}</div><div class="section-card"><div class="wallet-cards">${[['Основной баланс · TRC20',state.balance],['Доступно',state.balance-state.reserved],['Заблокировано',state.reserved],['Страховой депозит',state.insurance]].map(([label,num])=>`<div class="wallet-tile"><span class="asset-tag">USDT</span><div class="wallet-amount">${money(num)} USDT</div><div class="wallet-caption">${label}</div></div>`).join('')}<div class="wallet-tile"><div class="wallet-amount">${state.walletOps.filter(x=>x.kind==='deposit'&&x.status==='pending').length}</div><div class="wallet-caption">Пополнения в обработке</div></div><div class="wallet-tile"><div class="wallet-amount">${state.walletOps.filter(x=>x.kind==='withdraw'&&x.status==='pending').length}</div><div class="wallet-caption">Выводы в обработке</div></div></div></div><div class="section-card"><div class="section-header"><h2>История кошелька</h2><button class="secondary-button" data-export="wallet">${icon('download')} CSV</button></div>${walletTable()}</div>`}
+function wallet(){return `${title('Финансы')}<div class="wallet-actions"><button class="gradient-button" data-action="deposit">${icon('plus')} Пополнить USDT TRC20</button><button class="gradient-button" data-action="withdraw">Запросить вывод</button></div><div class="ice-ton-wallet-caption">${confirmedFinance?.depositAutoCreditEnabled?'Баланс USDT учитывает подтверждённые зачисления TRC20.':'Для пополнения USDT TRC20 отправьте перевод по реквизитам, затем TxID в рабочий чат для ручной проверки. Баланс автоматически не пополняется.'} ${esc(financeGateText())}</div><div class="section-card"><div class="wallet-cards">${[['Основной баланс · TRC20',state.balance],['Доступно',state.balance-state.reserved],['Заблокировано',state.reserved],['Страховой депозит',state.insurance]].map(([label,num])=>`<div class="wallet-tile"><span class="asset-tag">USDT</span><div class="wallet-amount">${money(num)} USDT</div><div class="wallet-caption">${label}</div></div>`).join('')}<div class="wallet-tile"><div class="wallet-amount">${state.walletOps.filter(x=>x.kind==='deposit'&&x.status==='pending').length}</div><div class="wallet-caption">Пополнения в обработке</div></div><div class="wallet-tile"><div class="wallet-amount">${state.walletOps.filter(x=>x.kind==='withdraw'&&x.status==='pending').length}</div><div class="wallet-caption">Выводы в обработке</div></div></div></div><div class="section-card"><div class="section-header"><h2>История кошелька</h2><button class="secondary-button" data-export="wallet">${icon('download')} CSV</button></div>${walletTable()}</div>`}
 function walletTable(){const rows=confirmedFinance?.depositAutoCreditEnabled?chainDeposits.map(x=>`<tr><td>${esc(x.id.slice(0,8))}</td><td>${x.purpose==='insurance'?'Страховой депозит':'Пополнение TRC20'}</td><td>${esc(x.amountUSDT)} USDT</td><td>${dateFmt(x.createdAt)}</td><td>${esc(x.status==='credited'?'Оплачено':x.status==='expired'?'Истекло':'Ожидается')}</td></tr>`).join(''):'';return `<div class="table-wrap"><table class="data-table"><thead><tr><th>Номер</th><th>Операция</th><th>Сумма</th><th>Создана</th><th>Статус</th></tr></thead><tbody>${rows||'<tr><td colspan="5" style="text-align:center;padding:33px;color:var(--muted)">Подтверждённых пополнений пока нет</td></tr>'}</tbody></table></div>`}
 function payoutRequests(){
  const all=Array.isArray(state.payoutSearchRequests)?state.payoutSearchRequests:[];
@@ -968,138 +968,107 @@ $('#open-menu').addEventListener('click',openSidebar);$('#sidebar-close').addEve
 })();
 </script>
 <script id="ice-deposit-preview-js">
-/* OnlyMatch TRC20 server invoices: exact amount, confirmed hash, automatic status refresh. */
+/* OnlyMatch: manual USDT TRC20 top-up. Operator confirms credit after TxID is sent to work chat. */
 (()=>{
 'use strict';
-const API='https://ice-pay-auth.onrender.com';
+const address='TGfwabyvWcCC9wHJLbqiE7x9P5GDsnD63J';
+const contract='TR7NHqjeKQxGTCi8q8ZY4pL8otSzgjLj6t';
+const verifyUrl='https://ice-pay-rates.onrender.com/trc20/verify';
 const root=document.getElementById('modal-root');
-const title={working:'Рабочий депозит',insurance:'Страховой депозит'};
-let purpose='',order=null,refreshTimer=null;
 if(!root)return;
-const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-const token=()=>sessionStorage.getItem('ice-pay-trader-token');
-function close(){
- if(refreshTimer){clearInterval(refreshTimer);refreshTimer=null}
- order=null;root.replaceChildren();document.body.style.overflow='';
-}
-function show(html){
- root.innerHTML='<div class="ice-deposit-overlay"><section class="ice-deposit-dialog" role="dialog" aria-modal="true" aria-label="Пополнение USDT"><div class="ice-deposit-title"><div><span class="ice-network-chip">USDT · TRC20</span><h2>Пополнить депозит</h2></div><button class="ice-deposit-close" type="button" data-ice-close aria-label="Закрыть">×</button></div>'+html+'</section></div>';
+const labels={working:'Рабочий депозит',insurance:'Страховой депозит'};
+let purpose='',amount='';
+const esc=value=>String(value??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const username=()=>sessionStorage.getItem('ice-pay-trader-username')||'Трейдер';
+const statusEl=()=>root.querySelector('#ice-deposit-result');
+function close(){root.replaceChildren();document.body.style.overflow='';}
+function show(inner){
+ root.innerHTML='<div class="ice-deposit-overlay"><section class="ice-deposit-dialog" role="dialog" aria-modal="true" aria-label="Пополнение USDT"><div class="ice-deposit-title"><div><span class="ice-network-chip">USDT · TRC20</span><h2>Пополнение USDT</h2></div><button type="button" class="ice-deposit-close" data-ice-close aria-label="Закрыть">×</button></div>'+inner+'</section></div>';
  document.body.style.overflow='hidden';
 }
-function warning(message){show('<div class="ice-deposit-warning"><strong>Пополнение недоступно</strong><span>'+esc(message)+'</span></div><button type="button" class="ice-deposit-secondary" data-ice-close>Закрыть</button>')}
-async function call(path,method,body){
- const authorization=token();
- if(!authorization)throw Error('Войдите в аккаунт трейдера');
- const ctl=new AbortController(),timer=setTimeout(()=>ctl.abort(),17000);
- try{
-  const response=await fetch(API+path,{method:method||'GET',cache:'no-store',signal:ctl.signal,
-   headers:{'Content-Type':'application/json',Authorization:'Bearer '+authorization},
-   body:body?JSON.stringify(body):undefined});
-  const payload=await response.json().catch(()=>({}));
-  if(!response.ok)throw Error(payload.error||'Не удалось связаться с сервисом');
-  return payload;
- }finally{clearTimeout(timer)}
-}
-async function begin(){
- close();
- show('<p class="ice-deposit-hint">Проверяем возможность пополнения…</p>');
- try{
-  const cfg=await call('/v1/trader/trc20/config');
-  if(!root.querySelector('.ice-deposit-overlay'))return;
-  if(!cfg.enabled||!cfg.autoCreditEnabled||!cfg.address)throw Error('Сервис пополнений пока не готов. Не отправляйте USDT.');
-  selectPurpose();
- }catch(e){warning(e.message)}
-}
 function selectPurpose(){
- purpose='';
- show('<p class="ice-deposit-hint">Выберите тип депозита</p><div class="ice-deposit-purpose-options">'+
-  '<button type="button" class="ice-deposit-purpose" data-ice-purpose="working"><strong>Рабочий депозит</strong><small>Пополнение основного баланса USDT</small></button>'+
-  '<button type="button" class="ice-deposit-purpose" data-ice-purpose="insurance"><strong>Страховой депозит</strong><small>Установленный Owner минимум: '+esc(Number(window.onlyMatchInsuranceMinimumUSDT??500).toLocaleString('ru-RU',{maximumFractionDigits:2}))+' USDT</small></button>'+
-  '</div><button class="ice-deposit-back" data-ice-history type="button">История пополнений</button>');
+ purpose='';amount='';
+ show('<p class="ice-deposit-hint">Выберите тип пополнения.</p><div class="ice-deposit-purpose-options">'+
+ '<button type="button" class="ice-deposit-purpose" data-ice-purpose="working"><strong>Рабочий депозит</strong><small>Пополнение рабочего баланса USDT</small></button>'+
+ '<button type="button" class="ice-deposit-purpose" data-ice-purpose="insurance"><strong>Страховой депозит</strong><small>Страховое обеспечение для допуска к работе</small></button></div>');
 }
 function amountStep(){
- show('<div class="ice-deposit-selected"><small>Тип депозита</small><strong>'+esc(title[purpose])+'</strong></div>'+
-  '<form id="ice-deposit-form"><label class="ice-deposit-label" for="ice-deposit-amount">Сумма в USDT</label>'+
-  '<div class="ice-deposit-money"><input id="ice-deposit-amount" name="amount" type="number" min="0.01" max="100000" step="0.01" required placeholder="100.00"><span>USDT</span></div>'+
-  '<p class="ice-deposit-hint">После создания заявки будет сформирована уникальная точная сумма перевода. Переводите её без округления, только USDT TRC20.</p>'+
-  '<button class="ice-deposit-primary" type="submit">Создать заявку</button><div id="ice-deposit-result" role="alert"></div></form>'+
-  '<button class="ice-deposit-back" data-ice-back="purpose" type="button">← Назад</button>');
+ if(!labels[purpose])return selectPurpose();
+ show('<div class="ice-deposit-selected"><small>Тип пополнения</small><strong>'+esc(labels[purpose])+'</strong></div>'+
+ '<form id="ice-deposit-form"><label class="ice-deposit-label" for="ice-deposit-amount">Сумма USDT</label><div class="ice-deposit-money">'+
+ '<input id="ice-deposit-amount" name="amount" type="number" min="0.01" max="100000" step="0.01" inputmode="decimal" value="'+esc(amount)+'" required placeholder="100.00"><span>USDT</span></div>'+
+ '<button class="ice-deposit-primary" type="submit">Продолжить</button><div id="ice-deposit-result" role="alert"></div></form>'+
+ '<button class="ice-deposit-back" data-ice-back="purpose" type="button">← Назад</button>');
 }
-function showOrder(item,message){
- order=item;
- const state=item.status==='credited'?'Оплачено':item.status==='expired'?'Время заявки истекло':'Ожидается перевод';
- const note=item.status==='credited'?'Перевод подтверждён, средства зачислены в баланс.':item.status==='expired'?'Если перевод выполнен, обратитесь в поддержку с хэшем транзакции.':'Отправьте ровно указанную сумму до окончания срока заявки.';
- show('<div class="ice-deposit-selected"><small>'+esc(title[item.purpose])+' · '+esc(state)+'</small><strong>'+esc(item.amountUSDT)+' USDT</strong></div>'+
-  '<div class="ice-deposit-summary"><div><small>Сеть</small><strong>TRON · TRC20</strong></div><div><small>Срок заявки</small><strong>'+esc(new Date(item.expiresAt).toLocaleString('ru-RU'))+'</strong></div></div>'+
-  '<label class="ice-deposit-label">Адрес USDT TRC20</label><div class="ice-deposit-address">'+esc(item.address)+'</div>'+
-  '<button type="button" class="ice-deposit-secondary" data-ice-copy="'+esc(item.address)+'">Скопировать адрес</button>'+
-  '<button type="button" class="ice-deposit-secondary" data-ice-copy="'+esc(item.amountUSDT)+'">Скопировать сумму</button>'+
-  '<p class="ice-deposit-hint">'+esc(note)+'</p>'+
-  (item.status!=='credited'?'<div class="ice-deposit-check"><h3>Проверка перевода</h3><label class="ice-deposit-label" for="ice-deposit-txid">TxID (необязательно)</label>'+
-   '<input id="ice-deposit-txid" maxlength="64" placeholder="Хэш транзакции"><button class="ice-deposit-primary" data-ice-verify type="button">Проверить перевод</button></div>':'')+
-  '<div id="ice-deposit-result" role="status" aria-live="polite">'+esc(message||'')+'</div>'+
-  '<button class="ice-deposit-back" data-ice-history type="button">Все заявки</button>');
- if(item.status==='credited'){
-  window.dispatchEvent(new Event('onlymatch:trader-authenticated'));
- }
+function summaryStep(){
+ if(!labels[purpose]||!amount)return amountStep();
+ show('<div class="ice-deposit-selected"><small>Тип депозита</small><strong>'+esc(labels[purpose])+'</strong></div>'+
+ '<div class="ice-deposit-summary"><div><small>Сумма</small><strong>'+esc(amount)+' USDT</strong></div><div><small>Сеть</small><strong>TRON · TRC20</strong></div></div>'+
+ '<label class="ice-deposit-label">Адрес для перевода USDT TRC20</label><div class="ice-deposit-address">'+esc(address)+'</div>'+
+ '<button type="button" class="ice-deposit-secondary" data-ice-copy="address">Скопировать адрес</button>'+
+ '<div class="ice-deposit-check"><h3>Проверка перевода</h3>'+
+ '<p class="ice-deposit-hint">После перевода отправьте TxID в рабочий чат. Сотрудник проверит поступление и подтвердит зачисление на выбранный депозит.</p>'+
+ '<label class="ice-deposit-label" for="ice-deposit-txid">TxID перевода</label>'+
+ '<input id="ice-deposit-txid" maxlength="64" autocapitalize="off" autocomplete="off" spellcheck="false" placeholder="64 символа хэша">'+
+ '<button class="ice-deposit-primary" type="button" data-ice-copy="txid">Скопировать TxID для рабочего чата</button>'+
+ '<button class="ice-deposit-secondary" type="button" data-ice-verify>Проверить перевод по TxID</button>'+
+ '<div id="ice-deposit-result" role="status" aria-live="polite"></div></div>'+
+ '<details class="ice-deposit-contract"><summary>Контракт USDT TRC20</summary><code>'+esc(contract)+'</code></details>'+
+ '<button class="ice-deposit-back" data-ice-back="amount" type="button">← Изменить сумму</button>');
 }
-async function refresh(){
- if(!order||!root.querySelector('.ice-deposit-overlay'))return;
- try{
-  const result=await call('/v1/trader/trc20/orders');
-  const fresh=(result.orders||[]).find(i=>i.id===order.id);
-  if(fresh&&fresh.status!==order.status)showOrder(fresh);
- }catch(e){console.warn('TRC20 refresh:',e.message)}
-}
-function startRefresh(){
- if(refreshTimer)clearInterval(refreshTimer);
- refreshTimer=setInterval(()=>{if(!document.hidden)refresh()},12000);
-}
-async function history(){
- try{
-  const data=await call('/v1/trader/trc20/orders');
-  show('<h3>Заявки TRC20</h3>'+
-   ((data.orders||[]).map(i=>'<button class="ice-deposit-purpose" type="button" data-ice-order="'+esc(i.id)+'"><strong>'+esc(i.amountUSDT)+' USDT · '+esc(i.purpose==='insurance'?'Страховой':'Рабочий')+'</strong><small>'+esc(i.status==='credited'?'Оплачено':i.status==='expired'?'Истекло':'Ожидает оплаты')+'</small></button>').join('')||'<p class="ice-deposit-hint">Заявок пока нет</p>')+
-   '<button class="ice-deposit-back" data-ice-back="purpose" type="button">← Назад</button>');
-  window.__omTrc20Orders=(data.orders||[]);
- }catch(e){warning(e.message)}
+async function copyText(value){
+ if(navigator.clipboard?.writeText){await navigator.clipboard.writeText(value);return;}
+ const area=document.createElement('textarea');area.value=value;area.style.position='fixed';area.style.opacity='0';
+ document.body.appendChild(area);area.select();
+ const ok=document.execCommand('copy');area.remove();
+ if(!ok)throw Error('Копирование недоступно. Выделите текст вручную.');
 }
 document.addEventListener('click',async e=>{
- if(e.target.closest('[data-action=deposit]')){e.preventDefault();e.stopPropagation();begin();return}
- if(e.target.closest('[data-ice-close]')){close();return}
+ if(e.target.closest('[data-action="deposit"]')){e.preventDefault();e.stopPropagation();selectPurpose();return;}
+ if(e.target.closest('[data-ice-close]')){close();return;}
  const choice=e.target.closest('[data-ice-purpose]');
- if(choice){purpose=choice.dataset.icePurpose;amountStep();return}
- if(e.target.closest('[data-ice-back]')){selectPurpose();return}
- if(e.target.closest('[data-ice-history]')){history();return}
- const selected=e.target.closest('[data-ice-order]');
- if(selected){const old=(window.__omTrc20Orders||[]).find(o=>o.id===selected.dataset.iceOrder);if(old){showOrder(old);startRefresh()}return}
+ if(choice){purpose=choice.dataset.icePurpose;amount='';amountStep();return;}
+ const back=e.target.closest('[data-ice-back]');
+ if(back){if(back.dataset.iceBack==='purpose')selectPurpose();else amountStep();return;}
  const copy=e.target.closest('[data-ice-copy]');
  if(copy){
-  try{await navigator.clipboard.writeText(copy.dataset.iceCopy);const x=root.querySelector('#ice-deposit-result');if(x)x.textContent='Скопировано'}catch{alert('Не удалось скопировать')}
+  const status=statusEl();
+  let value=address;
+  if(copy.dataset.iceCopy==='txid'){
+   value=root.querySelector('#ice-deposit-txid')?.value.trim()||'';
+   if(!/^[a-f0-9]{64}$/i.test(value)){if(status)status.textContent='Введите корректный TxID из 64 символов.';return;}
+  }
+  try{await copyText(value);if(status)status.textContent=copy.dataset.iceCopy==='txid'?'TxID скопирован. Отправьте его в рабочий чат.':'Адрес скопирован.';}
+  catch(err){if(status)status.textContent=err.message;}
   return;
  }
- const confirm=e.target.closest('[data-ice-verify]');
- if(!confirm||!order)return;
+ const button=e.target.closest('[data-ice-verify]');
+ if(!button)return;
+ const status=statusEl();
  const txid=root.querySelector('#ice-deposit-txid')?.value.trim()||'';
- const result=root.querySelector('#ice-deposit-result');
- if(!/^[a-f0-9]{64}$/i.test(txid)){if(result)result.textContent='Введите корректный TxID';return}
- confirm.disabled=true;
+ if(!/^[a-f0-9]{64}$/i.test(txid)){if(status)status.textContent='Введите корректный TxID из 64 символов.';return;}
+ button.disabled=true;if(status)status.textContent='Проверяем транзакцию в TRON…';
  try{
-  const data=await call('/v1/trader/trc20/orders/'+encodeURIComponent(order.id)+'/verify','POST',{txid});
-  showOrder(data.order,'Перевод успешно подтверждён');
- }catch(err){if(result)result.textContent=err.message}
- finally{confirm.disabled=false}
+  const controller=new AbortController(),timer=setTimeout(()=>controller.abort(),14000);
+  let response;
+  try{response=await fetch(verifyUrl+'?txid='+encodeURIComponent(txid)+'&amount='+encodeURIComponent(amount),{signal:controller.signal,cache:'no-store'});}
+  finally{clearTimeout(timer);}
+  const data=await response.json().catch(()=>({}));
+  if(!response.ok)throw Error(data.message||'Сервис проверки не ответил.');
+  if(status)status.textContent=data.status==='confirmed'
+    ?'Перевод подтверждён сетью TRON. Отправьте TxID в рабочий чат для подтверждения зачисления.'
+    :(data.message||'Перевод ещё не подтверждён. Проверьте TxID и сеть.');
+ }catch(err){if(status)status.textContent='Не удалось проверить TxID автоматически. Отправьте TxID в рабочий чат для проверки сотрудником.';}
+ finally{button.disabled=false;}
 },true);
-document.addEventListener('submit',async e=>{
+document.addEventListener('submit',e=>{
  if(e.target.id!=='ice-deposit-form')return;
  e.preventDefault();e.stopPropagation();
- const form=e.target,amount=form.elements.amount.value;
- const button=form.querySelector('button[type=submit]'),result=form.querySelector('#ice-deposit-result');
- button.disabled=true;
- try{
-  const data=await call('/v1/trader/trc20/orders','POST',{purpose,amount});
-  showOrder(data.order);startRefresh();
- }catch(err){if(result)result.textContent=err.message;button.disabled=false}
+ const v=Number(e.target.elements.amount.value);
+ if(!Number.isFinite(v)||v<0.01||v>100000||Math.abs(Math.round(v*100)-v*100)>1e-7){
+  const result=e.target.querySelector('#ice-deposit-result');if(result)result.textContent='Укажите сумму от 0,01 до 100 000 USDT с точностью 0,01.';return;
+ }
+ amount=v.toFixed(2);summaryStep();
 },true);
 document.addEventListener('keydown',e=>{if(e.key==='Escape'&&root.querySelector('.ice-deposit-overlay'))close()});
 })();
