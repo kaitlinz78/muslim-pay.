@@ -10,6 +10,7 @@ const crypto = require('node:crypto');
 const { promisify } = require('node:util');
 const { createClient } = require('redis');
 const trc20=require('./trc20-deposits');
+const durable=require('./durable-auth');
 const dns = require('node:dns').promises;
 const net = require('node:net');
 const scrypt = promisify(crypto.scrypt);
@@ -65,12 +66,14 @@ function assertStorage() {
   if (!ready || !storage || !storage.isReady) throw issue(503, 'Хранилище аккаунтов недоступно');
 }
 async function getAcc(id) {
-  const raw = await storage.get(key('account:' + id));
-  return raw ? JSON.parse(raw) : null;
+  if(durable.hasDatabase)return durable.get(id);
+  const raw=await storage.get(key('account:'+id));
+  return raw?JSON.parse(raw):null;
 }
 async function saveAcc(a) {
-  a.updatedAt = new Date().toISOString();
-  await storage.set(key('account:' + a.id), JSON.stringify(a));
+  a.updatedAt=new Date().toISOString();
+  await durable.put(a);
+  await storage.set(key('account:'+a.id),JSON.stringify(a));
 }
 async function financeOf(account) {
   // This is intentionally read-only: payment integration must verify and credit funds independently.
@@ -104,7 +107,7 @@ async function allocateMemo() {
   for (let tries=0;tries<50;tries++) {
     const random=crypto.randomBytes(14);
     const memo='ICE-'+Array.from(random, i => ABC[i % ABC.length]).join('');
-    if (!(await storage.exists(key('memo:'+normalizeMemo(memo))))) return memo;
+    if (!(await storage.exists(key('memo:'+normalizeMemo(memo)))) && !(await durable.memoExists(memo))) return memo;
   }
   throw issue(503, 'Не удалось создать уникальный Memo');
 }
@@ -135,12 +138,13 @@ async function initialize() {
   probe.once('timeout',()=>{console.error('Internal KV TCP timeout');probe.destroy()});
   storage=createClient({url:REDIS_URL, socket:{connectTimeout:10000,reconnectStrategy:attempt => Math.min(500*attempt,8000)}});
   storage.on('error', e => {ready=false;console.error('Redis connection error:',e.message)});
-  storage.on('ready', () => {ensureOwner().catch(e=>{ready=false;console.error('Owner recovery:',e.message)})});
+  storage.on('ready', () => {durable.initialize(storage,PREFIX).then(()=>ensureOwner()).catch(e=>{ready=false;console.error('Owner recovery:',e.message)})});
   await storage.connect();
+  await durable.initialize(storage,PREFIX);
   await ensureOwner();
   const timer=setInterval(()=>ensureOwner().catch(e=>console.error('Owner check:',e.message)),60000);
   timer.unref();
-  console.log('Ice Pay authorization API listening on Redis (VOLATILE, DEMO ONLY)');
+  console.log('OnlyMatch account store:',durable.isReady()?'PostgreSQL-backed accounts with Redis sessions':'Redis-only (not suitable for real deposits)');
   try {
     // Verify the actual login, bearer-token, and logout HTTP routes once on startup.
     // No passwords or tokens are logged.
@@ -208,10 +212,14 @@ async function recordAudit(action,details={}) {
   } catch(e){console.error('Owner audit append failed',e.message);}
 }
 async function listTraders() {
-  const ids=await storage.sMembers(key('trader-ids'));
-  const accounts=(await Promise.all(ids.map(getAcc))).filter(Boolean);
-  const sorted=accounts.sort((a,b)=>b.createdAt.localeCompare(a.createdAt));
-  return Promise.all(sorted.map(async a => ({...toPublic(a),finance:await financeOf(a)})));
+  let accounts;
+  if(durable.hasDatabase)accounts=await durable.traders();
+  else {
+    const ids=await storage.sMembers(key('trader-ids'));
+    accounts=(await Promise.all(ids.map(getAcc))).filter(Boolean);
+  }
+  const sorted=accounts.sort((a,b)=>String(b.createdAt).localeCompare(String(a.createdAt)));
+  return Promise.all(sorted.map(async a=>({...toPublic(a),finance:await financeOf(a)})));
 }
 function validateMemoChange(a,memo) {
   if(!memoValid(memo))throw issue(400,'Memo: от 6 до 40 символов, латиница, цифры, дефис или _');
@@ -231,7 +239,7 @@ async function handle(req,res) {
   if(origin&&!ORIGINS.has(origin))return reply(res,403,{error:'Источник запрещён'},origin);
   const url=new URL(req.url,'http://localhost');
   if(req.method==='GET'&&url.pathname==='/health') {
-    return reply(res,ready?200:503,{ok:ready,authEnabled:ready,storage:'volatile-free-redis',persistent:false,ownerConfigured:ready},origin);
+    return reply(res,ready?200:503,{ok:ready,authEnabled:ready,storage:durable.isReady()?'postgres-accounts-redis-sessions':'volatile-free-redis',persistent:durable.isReady(),ownerConfigured:ready,depositServerConfigured:!!process.env.DATABASE_URL&&!!process.env.TRONGRID_API_KEY,depositLiveRequested:process.env.ONLYMATCH_TRC20_LIVE==='true'},origin);
   }
   if(url.pathname==='/')return reply(res,200,{service:'Ice Pay account API',authEnabled:ready,persistent:false},origin);
   assertStorage();
@@ -242,7 +250,7 @@ async function handle(req,res) {
     const password=data.password;
     if(!traderLoginValid(username)||!traderPassValid(password))throw issue(401,'Неверный логин или пароль');
     const id=await storage.get(key('username:'+username));
-    const account=id?await getAcc(id):null;
+    const account=durable.hasDatabase?await durable.byLogin(username):(id?await getAcc(id):null);
     if(!account||!account.active||!(await pwCheck(password,account.passwordHash)))
       throw issue(401,'Неверный логин или пароль');
     if(data.role&&data.role!==account.role)throw issue(403,'Недостаточно прав доступа');
@@ -363,6 +371,7 @@ async function handle(req,res) {
         at:account.updatedAt,details:{id:account.id,username:account.username,changedBy:'trader'}};
       // Store the new password hash and Owner-visible audit entry in one transaction.
       // Neither plaintext passwords nor password hashes appear in the audit.
+      await durable.put(account);
       await storage.multi()
         .set(key('account:'+account.id),JSON.stringify(account))
         .lPush(key('owner-audit'),JSON.stringify(event))
@@ -474,7 +483,7 @@ async function handle(req,res) {
     const note=String(data.note||'').trim();
     if(note.length>500)throw issue(400,'Заметка не больше 500 символов');
     const nameKey=key('username:'+username.toLowerCase());
-    if(await storage.exists(nameKey))throw issue(409,'Такой логин уже существует');
+    if(await storage.exists(nameKey) || (durable.hasDatabase&&await durable.byLogin(username)))throw issue(409,'Такой логин уже существует');
     const id=crypto.randomUUID();
     const memo=await allocateMemo();
     // Reserve both the login and memo before writing the trader.
