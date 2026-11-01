@@ -9,6 +9,7 @@ const http = require('node:http');
 const crypto = require('node:crypto');
 const { promisify } = require('node:util');
 const { createClient } = require('redis');
+const trc20=require('./trc20-deposits');
 const dns = require('node:dns').promises;
 const net = require('node:net');
 const scrypt = promisify(crypto.scrypt);
@@ -76,7 +77,8 @@ async function financeOf(account) {
   // An absent verified ledger is zero; no client-supplied amounts can enter this calculation.
   const raw = await storage.get(key('finance:verified-insurance:' + account.id));
   const parsed = typeof raw==='string' && /^(?:0|[1-9]\d{0,8})(?:\.\d{1,2})?$/.test(raw) ? Number(raw) : 0;
-  const confirmedInsuranceUSDT = Number.isFinite(parsed) ? Math.max(0, parsed) : 0;
+  const chain=await trc20.balances(account.id);
+  const confirmedInsuranceUSDT=(Number.isFinite(parsed) ? Math.max(0,parsed) : 0)+chain.insuranceUSDT;
   // Owner-defined per-trader requirement; legacy accounts retain 500 USDT.
   // Store integer cents to avoid precision errors. This is a requirement only,
   // never a substitute for verified deposits.
@@ -87,13 +89,15 @@ async function financeOf(account) {
   return {
     accountId: account.id,
     confirmedInsuranceUSDT,
+    mainBalanceUSDT:chain.mainUSDT,
+    depositAutoCreditEnabled:chain.enabled,
     minimumInsuranceUSDT,
     shortfallUSDT: Math.max(0, Math.round((minimumInsuranceUSDT-confirmedInsuranceUSDT)*100)/100),
     workEligible,
     working: workEligible && !!account.working,
     verification: raw === null ? 'not_connected' : 'server_verified',
-    autoCreditEnabled: false,
-    note: raw === null ? 'Нет подтверждённого поступления страхового депозита. Автозачисление не подключено.' : 'Баланс по серверному учёту подтверждённых поступлений.'
+    autoCreditEnabled: chain.enabled,
+    note: chain.enabled ? 'Зачисления USDT TRC20 подтверждены и учтены сервером.' : 'Пополнение USDT TRC20 временно недоступно.'
   };
 }
 async function allocateMemo() {
@@ -269,6 +273,28 @@ async function handle(req,res) {
     if(account.role!=='trader')throw issue(403,'Доступ только трейдеру');
     return reply(res,200,{finance:await financeOf(account)},origin);
   }
+  // Real TRC20 invoices are available ONLY after the persistent-account
+  // migration and PostgreSQL-backed ledger have both been enabled.
+  if(req.method==='GET'&&url.pathname==='/v1/trader/trc20/config'){
+    if(account.role!=='trader')throw issue(403,'Доступ только трейдерам');
+    return reply(res,200,await trc20.config(),origin);
+  }
+  if(req.method==='GET'&&url.pathname==='/v1/trader/trc20/orders'){
+    if(account.role!=='trader')throw issue(403,'Доступ только трейдерам');
+    return reply(res,200,{orders:await trc20.list(account.id)},origin);
+  }
+  if(req.method==='POST'&&url.pathname==='/v1/trader/trc20/orders'){
+    if(account.role!=='trader')throw issue(403,'Доступ только трейдерам');
+    const body=await parseBody(req);
+    return reply(res,201,{order:await trc20.create(account.id,body.purpose,body.amount)},origin);
+  }
+  const confirmation=url.pathname.match(/^\/v1\/trader\/trc20\/orders\/([0-9a-f-]{36})\/verify$/);
+  if(req.method==='POST'&&confirmation){
+    if(account.role!=='trader')throw issue(403,'Доступ только трейдерам');
+    const body=await parseBody(req);
+    const order=await trc20.confirm(account.id,confirmation[1],String(body.txid||''));
+    return reply(res,200,{order,finance:await financeOf(account)},origin);
+  }
   if(req.method==='POST'&&url.pathname==='/v1/trader/work-status') {
     if(account.role!=='trader')throw issue(403,'Доступ только трейдеру');
     const data=await parseBody(req);
@@ -388,6 +414,9 @@ async function handle(req,res) {
     await storage.set(key('merchant:'+merchant.id),JSON.stringify(merchant));
     await recordAudit('merchant.updated',{id:merchant.id,name,status});
     return reply(res,200,{merchant,paymentProcessingEnabled:false},origin);
+  }
+  if(req.method==='GET'&&url.pathname==='/v1/admin/trc20/orders'){
+    return reply(res,200,{orders:await trc20.ownerList()},origin);
   }
   if(req.method==='GET'&&url.pathname==='/v1/admin/activity') {
     const values=await storage.lRange(key('owner-audit'),0,99);
@@ -510,4 +539,5 @@ http.createServer((req,res)=>handle(req,res).catch(err=>{
 })).listen(PORT,'0.0.0.0',()=>{
   console.log('Ice Pay accounts API HTTP started on',PORT);
   initialize().catch(e=>{ready=false;console.error('Ice Pay accounts backend not ready:',e.message)});
+  trc20.start();
 });
