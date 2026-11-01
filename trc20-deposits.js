@@ -3,8 +3,8 @@
 const crypto=require('node:crypto');
 const {Pool}=require('pg');
 const {verifyTx,TREASURY,USDT_CONTRACT}=require('./tron-verify');
+const durable=require('./durable-auth');
 const LIVE=process.env.ONLYMATCH_TRC20_LIVE==='true' &&
- process.env.ONLYMATCH_AUTH_PERSISTENT==='true' &&
  Boolean(process.env.DATABASE_URL && process.env.TRONGRID_API_KEY);
 const pool=LIVE?new Pool({connectionString:process.env.DATABASE_URL,
  max:4,connectionTimeoutMillis:8000,statement_timeout:18000}):null;
@@ -32,7 +32,7 @@ function expose(row){
   creditedAt:row.credited_at||null,txid:row.txid||null};
 }
 async function ensure(){
- if(!LIVE)return false;
+ if(!LIVE||!durable.isReady())return false;
  if(!schema)schema=(async()=>{
   const c=await pool.connect();
   try{
