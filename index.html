@@ -306,6 +306,27 @@ html[data-ice-mode="dark"] .om-req-list .om-req-toggle:has(input:checked){backgr
 html[data-ice-mode="dark"] .om-req-list .om-req-toggle input:checked+.switch{background:#1be873!important;border-color:#36ff8e!important;box-shadow:0 0 15px rgba(54,255,142,.4)}
 html[data-ice-mode="dark"] .om-req-delete{color:#ff7799;background:rgba(240,70,99,.09);border-color:rgba(255,119,153,.4)}
 </style>
+<style id="onlymatch-payout-search">
+.om-ps-note{line-height:1.65;color:var(--ui-muted,#71849b);font-size:12px;margin:8px 0 18px}
+.om-ps-steps{display:flex;gap:7px;margin:8px 0 20px;flex-wrap:wrap}
+.om-ps-steps span{flex:1 1 80px;padding:10px 9px;text-align:center;border-radius:12px;background:var(--ui-soft,#ecf4ff);border:1px solid var(--ui-border,#d8e5f5);color:var(--ui-muted,#71849b);font-size:11px;font-weight:800}
+.om-ps-steps span.on{color:var(--ui-main,#2563eb);background:var(--ui-glow,#ebf2ff);border-color:var(--ui-main,#2563eb)}
+.om-ps-intro{font-size:13px;line-height:1.6;margin:5px 0 18px;color:var(--ui-ink,#183252)}
+.om-ps-limits{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+.om-ps-limits input{width:100%}
+.om-ps-error{min-height:16px;margin:9px 0;font-size:12px;font-weight:700;color:#d54e70}
+.om-ps-field-note{display:block;margin-top:7px;font-size:11px;color:var(--ui-muted,#71849b)}
+.om-ps-review{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:9px;margin:8px 0 15px}
+.om-ps-review>div{padding:13px;border:1px solid var(--ui-border,#d8e5f5);background:var(--ui-soft,#edf5ff);border-radius:13px;display:grid;gap:6px;overflow-wrap:anywhere}
+.om-ps-review small{font-size:11px;color:var(--ui-muted,#71849b)}
+.om-ps-review strong{font-size:14px;color:var(--ui-ink,#183252)}
+.om-ps-cancel{border:1px solid rgba(225,72,110,.3);background:rgba(225,72,110,.08);color:#df456f;border-radius:999px;min-height:37px;padding:9px 16px;font-size:12px;font-weight:800;cursor:pointer;white-space:nowrap}
+.om-ps-cancel:hover{background:rgba(225,72,110,.16)}
+.om-ps-muted{color:var(--ui-muted,#71849b)}
+.om-ps-empty{text-align:center;color:var(--ui-muted,#71849b);padding:35px}
+.om-ps-table td{vertical-align:middle}
+@media(max-width:520px){.om-ps-limits,.om-ps-review{grid-template-columns:1fr}.om-ps-steps span{font-size:10px;padding:10px 6px}}
+</style>
 </head>
 <body>
   <div class="shell" id="shell">
@@ -343,7 +364,7 @@ const paths={home:'<path d="m3 10 9-7 9 7v10a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1z"/><p
 function icon(n){return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="19" height="19" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${paths[n]||paths.info}</svg>`}
 const nav=[{group:'',items:[['home','Главная','home']]},{group:'ОПЕРАЦИИ',items:[['payin','Pay-In','cube'],['payout','Pay-Out','wallet'],['payout-requests','Запросы Pay-Out','file'],['appeals','Апелляции','message']]},{group:'КАБИНЕТ',items:[['requisites','Реквизиты','card'],['wallet','Финансы','wallet'],['automation','Автоматизация','robot'],['settings','Настройки','gear'],['notifications','Уведомления','bell']]}];
 const titles=Object.fromEntries(nav.flatMap(g=>g.items.map(i=>[i[0],i[1]])));
-const initial=()=>({working:false,balance:0,reserved:0,insurance:0,rate:null,records:[],orders:[],walletOps:[],appeals:[],notifications:[],autoPayin:false,autoPayout:false,onlyActive:true});
+const initial=()=>({working:false,balance:0,reserved:0,insurance:0,rate:null,records:[],orders:[],walletOps:[],appeals:[],notifications:[],autoPayin:false,autoPayout:false,onlyActive:true,payoutSearchRequests:[]});
 function load(){
  try{
   const key='ice-pay-demo-'+(sessionStorage.getItem('ice-pay-trader-id')||'guest');
@@ -358,6 +379,7 @@ function load(){
    if(!Array.isArray(data.walletOps))data.walletOps=[];
    if(!Array.isArray(data.appeals))data.appeals=[];
    if(!Array.isArray(data.notifications))data.notifications=[];
+   if(!Array.isArray(data.payoutSearchRequests))data.payoutSearchRequests=[];
    return data;
   }
  }catch(e){}
@@ -457,7 +479,26 @@ function transactions(which){return `${title(which==='payin'?'Pay-In':'Pay-Out')
 function requisites(){const active=state.records.filter(r=>r.status==='active').length;let list=(tabs.requisites==='all'?state.records:state.records.filter(r=>r.status===(tabs.requisites||'all')));let q=(searches.requisites||'').toLowerCase();if(q)list=list.filter(r=>(r.name+' '+r.type+' '+r.detail+' '+r.holder).toLowerCase().includes(q));if(selects.reqtype&&selects.reqtype!=='all')list=list.filter(r=>r.type===selects.reqtype);if(selects.reqstatus&&selects.reqstatus!=='all')list=list.filter(r=>r.status===selects.reqstatus);return `${title('Реквизиты')}<div class="action-row"><button class="gradient-button" data-action="add-requisite">Создать реквизиты</button></div><div class="mini-card-grid"><div class="mini-card"><strong>${state.records.length}</strong><span>Всего реквизитов</span></div><div class="mini-card"><strong>${active}</strong><span>Активных</span></div></div><div class="section-card"><div style="margin-bottom:15px">${tabBar('requisites',[['all','Все'],['active','Активные'],['inactive','Неактивные'],['archived','Архив']])}</div><div class="filters"><input data-search="requisites" type="search" placeholder="Поиск по названию, реквизиту, ФИО, банку..." value="${esc(searches.requisites||'')}"><select data-select="reqtype"><option value="all">Все типы</option><option value="Банковская карта" ${selects.reqtype==='Банковская карта'?'selected':''}>Банковская карта</option><option value="СБП" ${selects.reqtype==='СБП'?'selected':''}>СБП</option></select><select data-select="reqstatus"><option value="all">Все статусы</option><option value="active" ${selects.reqstatus==='active'?'selected':''}>Активные</option><option value="inactive" ${selects.reqstatus==='inactive'?'selected':''}>Неактивные</option><option value="archived" ${selects.reqstatus==='archived'?'selected':''}>Архивные</option></select></div><div class="table-wrap om-req-list"><table class="data-table"><thead><tr><th>Название</th><th>Тип</th><th>Данные</th><th>Владелец</th><th>Статус</th><th style="text-align:right">Действия</th></tr></thead><tbody>${list.map(r=>`<tr><td><button type="button" class="om-req-name" data-detail="req:${esc(r.id)}">${esc(r.name)}</button>${Number.isSafeInteger(r.minPaymentRub)&&Number.isSafeInteger(r.maxPaymentRub)?`<small class="om-req-hint">${money(r.minPaymentRub,0)}–${money(r.maxPaymentRub,0)} ₽ · ${Number.isSafeInteger(r.totalLimitRub)?'общий лимит '+money(r.totalLimitRub,0)+' ₽ · ':''}до ${money(r.maxActiveOrders,0)} активных ордеров</small>`:""}</td><td>${esc(r.type)}</td><td>${esc(r.detail)}</td><td>${esc(r.holder||'—')}</td><td>${statusTag(r.status)}</td><td><div class="om-req-row-actions"><label class="om-req-toggle" style="${r.status==='archived'?'display:none':''}" title="Включить или выключить реквизит"><span>${r.status==='active'?'Активен':'Неактивен'}</span><input type="checkbox" class="switch-input" data-requisite-toggle="${esc(r.id)}" aria-label="Рабочий статус реквизита ${esc(r.name)}" ${r.status==='active'?'checked':''}><span class="switch" aria-hidden="true"></span></label><button type="button" class="om-req-edit" style="${r.status==='archived'?'display:none':''}" data-requisite-edit="${esc(r.id)}">Редактировать</button><button type="button" class="om-req-edit" style="${r.status==='archived'?'':'display:none'}" data-requisite-restore="${esc(r.id)}">Восстановить</button>${r.status==='archived'?`<button class="om-req-delete" type="button" data-requisite-delete="${esc(r.id)}">Удалить</button>`:''}</div></td></tr>`).join('')||'<tr><td colspan="6" style="padding:35px;text-align:center;color:var(--muted)">Реквизиты не найдены</td></tr>'}</tbody></table></div></div>`}
 function wallet(){return `${title('Финансы')}<div class="wallet-actions"><button class="gradient-button" data-action="deposit">${icon('plus')} Пополнить USDT TRC20</button><button class="gradient-button" data-action="withdraw">Запросить вывод</button></div><div class="ice-ton-wallet-caption">Основной баланс USDT демонстрационный. Страховой депозит отображается только по подтверждённым сервером поступлениям. ${esc(financeGateText())}</div><div class="section-card"><div class="wallet-cards">${[['Основной баланс · TRC20',state.balance],['Доступно',state.balance-state.reserved],['Заблокировано',state.reserved],['Страховой депозит',state.insurance]].map(([label,num])=>`<div class="wallet-tile"><span class="asset-tag">USDT</span><div class="wallet-amount">${money(num)} USDT</div><div class="wallet-caption">${label}</div></div>`).join('')}<div class="wallet-tile"><div class="wallet-amount">${state.walletOps.filter(x=>x.kind==='deposit'&&x.status==='pending').length}</div><div class="wallet-caption">Пополнения в обработке</div></div><div class="wallet-tile"><div class="wallet-amount">${state.walletOps.filter(x=>x.kind==='withdraw'&&x.status==='pending').length}</div><div class="wallet-caption">Выводы в обработке</div></div></div></div><div class="section-card"><div class="section-header"><h2>История кошелька</h2><button class="secondary-button" data-export="wallet">${icon('download')} CSV</button></div>${walletTable()}</div>`}
 function walletTable(){return `<div class="table-wrap"><table class="data-table"><thead><tr><th>Номер</th><th>Операция</th><th>Сумма</th><th>Создана</th><th>Статус</th></tr></thead><tbody>${state.walletOps.map(x=>`<tr><td>${esc(x.id)}</td><td>${x.kind==='deposit'?'Пополнение':'Запрос вывода'}</td><td>${money(x.amount)} USDT</td><td>${dateFmt(x.created)}</td><td>${statusTag(x.status)}</td></tr>`).join('')||'<tr><td colspan="5" style="text-align:center;padding:33px;color:var(--muted)">Операций пока нет</td></tr>'}</tbody></table></div>`}
-function payoutRequests(){return `${title('Запросы Pay-Out')}<div class="action-row"><button class="gradient-button" data-action="new-payout">${icon('plus')} Новый запрос</button></div><div class="section-card"><div class="section-header"><h2>Запросы на выплату</h2><span class="volume-small">История заявок</span></div><div class="filters"><input type="search" data-search="payout" placeholder="Найти заявку" value="${esc(searches.payout||'')}"></div>${orderList('payout')}</div>`}
+function payoutRequests(){
+ const all=Array.isArray(state.payoutSearchRequests)?state.payoutSearchRequests:[];
+ const count=all.filter(r=>r.status==='pending').length;
+ const filter=tabs.payoutRequests||'all';
+ const query=String(searches.payoutRequests||'').toLowerCase().trim();
+ const items=all.filter(r=>(filter==='all'||r.status===filter)&&(!query||[r.id,r.method,r.detailsMasked,r.minAmountRub,r.maxAmountRub].join(' ').toLowerCase().includes(query)));
+ const rows=items.map(r=>{
+  const method=r.method==='sbp'?'СБП':'Банковская карта';
+  const status=r.status==='pending'?'<span class="status-pill pending">Ожидает поиска</span>':'<span class="status-pill expired">Отменена</span>';
+  const actions=r.status==='pending'?'<button type="button" class="om-ps-cancel" data-ps-cancel="'+esc(r.id)+'">Отменить</button>':'<span class="om-ps-muted">—</span>';
+  return '<tr><td><strong>'+esc(r.id)+'</strong></td><td><strong>'+money(r.minAmountRub,0)+'–'+money(r.maxAmountRub,0)+' ₽</strong></td><td>'+method+'</td><td>'+esc(r.detailsMasked)+'</td><td>'+status+'</td><td>'+dateFmt(r.createdAt)+'</td><td>'+actions+'</td></tr>';
+ }).join('')||'<tr><td colspan="7" class="om-ps-empty">Запросов по заданным фильтрам нет</td></tr>';
+ return title('Запросы Pay-Out')+
+  '<div class="action-row"><button class="gradient-button" type="button" data-action="new-payout-search">'+icon('plus')+' Создать запрос на поиск Pay-Out</button></div>'+
+  '<div class="mini-card-grid"><div class="mini-card"><strong>'+count+'</strong><span>Активных запросов</span></div><div class="mini-card"><strong>'+all.length+'</strong><span>Всего запросов</span></div></div>'+
+  '<div class="section-card"><div class="section-header"><h2>Поиск Pay-Out</h2><span class="volume-small">Суммы в RUB</span></div>'+
+  '<p class="om-ps-note">Укажите диапазон суммы и реквизиты, по которым нужен Pay-Out. Пока это локальные запросы в браузере: автоматический поиск и отправка в процессинг не подключены.</p>'+
+  '<div class="filters">'+tabBar('payoutRequests',[['all','Все'],['pending','Активные'],['cancelled','Отменённые']])+'<input type="search" data-search="payoutRequests" value="'+esc(searches.payoutRequests||'')+'" placeholder="Номер заявки, сумма или реквизит"></div>'+
+  '<div class="table-wrap om-ps-table"><table class="data-table"><thead><tr><th>№ запроса</th><th>Лимиты поиска</th><th>Способ</th><th>Реквизит</th><th>Статус</th><th>Создан</th><th>Действие</th></tr></thead><tbody>'+rows+'</tbody></table></div></div>';
+}
 function manual(){return `${title('Ручная выдача')}<div class="two-column"><div class="section-card"><div class="section-header"><h2>Создать выдачу</h2></div><p class="section-caption">Заявка на ручную выдачу сохраняется локально. Перевод не отправляется.</p><form id="manual-form"><label class="form-field">Сумма, RUB<input name="amount" type="number" min="1" step="1" required placeholder="Например, 5000"></label><label class="form-field">Способ<select name="method"><option>Банковская карта</option><option>СБП</option></select></label><label class="form-field">Комментарий<input name="comment" maxlength="100" placeholder="Назначение операции"></label><button class="gradient-button" type="submit">Сохранить заявку</button></form></div><div class="section-card"><div class="section-header"><h2>Правила работы</h2></div><div class="info-list"><div class="info-row"><span>Рабочий статус</span>${workLabel()}</div><div class="info-row"><span>Доступный баланс</span><strong>${money(state.balance-state.reserved)} USDT</strong></div><div class="info-row"><span>Валюта</span><strong>RUB</strong></div><div class="info-row"><span>Курс Rapira (продажа USDT)</span><strong data-rapira-rate>Загрузка курса…</strong></div></div><p class="section-caption" style="margin-top:15px">Для подключения реальных выплат потребуются защищённая платёжная интеграция и отдельная проверка операций.</p></div></div>`}
 function qr(){return `${title('QR')}<div class="two-column"><div class="section-card"><div class="section-header"><h2>QR-операции</h2></div><div class="info-strip">QR-заявки сохраняются локально. Платёжный QR не формируется.</div><form id="qr-form"><label class="form-field">Сумма, RUB<input name="amount" type="number" min="1" step="1" placeholder="Введите сумму" required></label><label class="form-field">Комментарий<input name="comment" maxlength="100" placeholder="Комментарий к операции"></label><button class="gradient-button" type="submit">Сохранить QR-заявку</button></form></div><div class="section-card"><div class="section-header"><h2>История QR</h2></div>${empty('qr','Пока нет QR-операций','После сохранения заявка появится в разделе Pay-In.')}</div></div>`}
 function empty(n,h,p){return `<div class="empty-state">${icon(n)}<h3>${h}</h3><p>${p}</p></div>`}
@@ -603,9 +644,119 @@ function openRequisiteWizard(record=null){
  stepOne();
 }
 
-function startAction(action){if(action==='add-requisite'){openRequisiteWizard();return}
+// A search request is NOT a payout order. Card data is masked before browser storage.
+function openPayoutSearchWizard(){
+ const draft={min:0,max:0,method:'sbp',recipient:''};
+ const onlyDigits=value=>String(value||'').replace(/\D/g,'');
+ const normalizePhone=value=>{
+  const d=onlyDigits(value);
+  if(d.length===10)return '+7'+d;
+  if(d.length===11&&(d[0]==='7'||d[0]==='8'))return '+7'+d.slice(1);
+  return '';
+ };
+ const maskedRecipient=()=>draft.method==='sbp'
+  ?'+7 ••• •••-'+draft.recipient.slice(-4,-2)+'-'+draft.recipient.slice(-2)
+  :'•••• '+draft.recipient.slice(-4);
+ const heading=step=>'<div class="om-ps-steps"><span class="'+(step===1?'on':'')+'">1. Лимиты</span><span class="'+(step===2?'on':'')+'">2. Реквизит</span><span class="'+(step===3?'on':'')+'">3. Проверка</span></div>';
+ const formError=(form,msg)=>{const el=form.querySelector('.om-ps-error');if(el)el.textContent=msg;};
+ function amounts(){
+  modal('Новый запрос на поиск Pay-Out',heading(1)+
+   '<p class="om-ps-intro">В каком диапазоне сумм искать Pay-Out?</p>'+
+   '<form id="om-ps-limits"><div class="om-ps-limits">'+
+   '<label class="form-field">Сумма от, ₽<input name="min" type="number" min="1" max="100000000" step="1" inputmode="numeric" value="'+(draft.min||'')+'" placeholder="Например, 5 000" required></label>'+
+   '<label class="form-field">Сумма до, ₽<input name="max" type="number" min="1" max="100000000" step="1" inputmode="numeric" value="'+(draft.max||'')+'" placeholder="Например, 20 000" required></label></div>'+
+   '<p class="om-ps-error" role="alert" aria-live="polite"></p>'+
+   '<div class="modal-footer"><button type="button" class="secondary-button" data-modal-close="true">Отмена</button><button type="submit" class="gradient-button">Продолжить</button></div></form>');
+  const form=$('#om-ps-limits');
+  form.addEventListener('submit',e=>{
+   e.preventDefault();
+   const a=Number(form.elements.min.value),b=Number(form.elements.max.value);
+   if(!Number.isSafeInteger(a)||a<1||a>100000000)return formError(form,'Укажите минимальную сумму от 1 до 100 000 000 ₽.');
+   if(!Number.isSafeInteger(b)||b<a||b>100000000)return formError(form,'Максимальная сумма должна быть не меньше минимальной.');
+   draft.min=a;draft.max=b;
+   recipient();
+  });
+ }
+ function recipient(){
+  modal('Новый запрос на поиск Pay-Out',heading(2)+
+   '<p class="om-ps-intro">Выберите способ получения и укажите номер.</p>'+
+   '<form id="om-ps-recipient">'+
+   '<label class="form-field">Способ получения<select name="method" required>'+
+   '<option value="sbp"'+(draft.method==='sbp'?' selected':'')+'>СБП (по номеру телефона)</option>'+
+   '<option value="card"'+(draft.method==='card'?' selected':'')+'>Банковская карта РФ</option>'+
+   '</select></label>'+
+   '<label class="form-field"><span id="om-ps-recipient-caption">Номер телефона СБП</span><input name="recipient" type="text" inputmode="tel" autocomplete="off" maxlength="30" value="'+esc(draft.recipient)+'" placeholder="+7 999 123-45-67" required><small class="om-ps-field-note">Номер карты не сохраняется целиком в браузере.</small></label>'+
+   '<p class="om-ps-error" role="alert" aria-live="polite"></p>'+
+   '<div class="modal-footer"><button type="button" class="secondary-button" id="om-ps-back-limits">← Назад</button><button type="submit" class="gradient-button">Продолжить</button></div></form>');
+  const form=$('#om-ps-recipient'),method=form.elements.method,field=form.elements.recipient;
+  function syncRecipientType(changed){
+   const card=method.value==='card';
+   $('#om-ps-recipient-caption').textContent=card?'Номер банковской карты':'Номер телефона СБП';
+   field.placeholder=card?'0000 0000 0000 0000':'+7 999 123-45-67';
+   field.inputMode=card?'numeric':'tel';
+   if(changed){field.value='';draft.recipient='';}
+  }
+  method.addEventListener('change',()=>syncRecipientType(true));
+  syncRecipientType(false);
+  form.querySelector('#om-ps-back-limits').addEventListener('click',()=>{
+   draft.method=method.value;draft.recipient=field.value;
+   amounts();
+  });
+  form.addEventListener('submit',e=>{
+   e.preventDefault();
+   const kind=method.value;
+   if(kind!=='sbp'&&kind!=='card')return formError(form,'Выберите способ получения.');
+   const raw=field.value.trim(),digits=onlyDigits(raw);
+   const normalized=kind==='sbp'?normalizePhone(raw):digits;
+   if(kind==='sbp'&&!normalized)return formError(form,'Введите корректный номер СБП: +7 и 10 цифр.');
+   if(kind==='card'&&!/^\d{16,19}$/.test(digits))return formError(form,'Введите номер карты от 16 до 19 цифр.');
+   draft.method=kind;draft.recipient=normalized;
+   review();
+  });
+ }
+ function review(){
+  const label=draft.method==='sbp'?'СБП':'Банковская карта';
+  modal('Проверьте запрос Pay-Out',heading(3)+
+   '<div class="om-ps-review">'+
+   '<div><small>Ищем Pay-Out от</small><strong>'+money(draft.min,0)+' ₽</strong></div>'+
+   '<div><small>До</small><strong>'+money(draft.max,0)+' ₽</strong></div>'+
+   '<div><small>Способ</small><strong>'+label+'</strong></div>'+
+   '<div><small>Реквизит</small><strong>'+esc(maskedRecipient())+'</strong></div></div>'+
+   '<p class="om-ps-note">Заявка будет сохранена только в этом браузере. Реальный поиск и передача платёжных реквизитов не выполняются.</p>'+
+   '<div class="modal-footer"><button type="button" class="secondary-button" id="om-ps-back-recipient">← Назад</button><button type="button" class="gradient-button" id="om-ps-create">Создать запрос</button></div>');
+  $('#om-ps-back-recipient').addEventListener('click',recipient);
+  $('#om-ps-create').addEventListener('click',()=>{
+   const id='PS-'+Date.now().toString(36).toUpperCase()+'-'+Math.floor(Math.random()*1000).toString().padStart(3,'0');
+   if(!Array.isArray(state.payoutSearchRequests))state.payoutSearchRequests=[];
+   state.payoutSearchRequests.unshift({
+    id,minAmountRub:draft.min,maxAmountRub:draft.max,
+    method:draft.method,detailsMasked:maskedRecipient(),
+    status:'pending',createdAt:new Date().toISOString()
+   });
+   addNotice('Запрос Pay-Out создан','Поиск '+money(draft.min,0)+'–'+money(draft.max,0)+' ₽ · '+label);
+   closeModal();tabs.payoutRequests='all';refresh();toast('Запрос Pay-Out сохранён в браузере');
+  });
+ }
+ amounts();
+}
+function cancelPayoutSearch(id){
+ const request=(state.payoutSearchRequests||[]).find(r=>r.id===id);
+ if(!request||request.status!=='pending'){toast('Этот запрос уже неактивен');return;}
+ modal('Отменить поиск Pay-Out?','<p class="om-ps-intro">Запрос <strong>'+esc(request.id)+'</strong> на сумму от '+money(request.minAmountRub,0)+' до '+money(request.maxAmountRub,0)+' ₽ будет отмечен как отменённый. В истории он останется.</p>'+
+  '<div class="modal-footer"><button type="button" class="secondary-button" data-modal-close="true">Не отменять</button><button type="button" class="om-ps-cancel" id="om-ps-confirm-cancel">Отменить запрос</button></div>');
+ $('#om-ps-confirm-cancel').addEventListener('click',()=>{
+  const active=(state.payoutSearchRequests||[]).find(r=>r.id===id&&r.status==='pending');
+  if(!active){closeModal();return;}
+  active.status='cancelled';active.cancelledAt=new Date().toISOString();
+  addNotice('Запрос Pay-Out отменён',id);
+  closeModal();refresh();toast('Поиск Pay-Out отменён');
+ });
+}
+
+function startAction(action){if(action==='new-payout-search'){openPayoutSearchWizard();return}
+if(action==='add-requisite'){openRequisiteWizard();return}
 if(['deposit','withdraw'].includes(action)){let deposit=action==='deposit';modal(deposit?'Пополнить баланс':'Запросить вывод',`<div class="info-strip">Заявка сохраняется в браузере. Перевод средств и изменение баланса через эту форму не выполняются.</div><form><label class="form-field">Сумма в USDT<input name="amount" type="number" min="0.01" max="100000" step="0.01" placeholder="0.00" required></label><label class="form-field">Сеть<select name="network"><option>USDT · TRC20</option></select></label>${deposit?'':'<label class="form-field">Адрес получения USDT TRC20<input name="recipient" maxlength="90" placeholder="Адрес TRC20" required></label>'}${modalButtons.replace('Сохранить',deposit?'Создать заявку':'Запросить вывод')}</form>`,data=>{const amount=Number(data.get('amount'));if(!Number.isFinite(amount)||amount<=0||amount>100000)return toast('Проверьте сумму');if(!deposit&&!String(data.get('recipient')||'').trim())return toast('Укажите адрес');let id=randId('W');state.walletOps.unshift({id,kind:action,amount,created:new Date().toISOString(),status:'pending'});addNotice(deposit?'Запрошено пополнение':'Запрошен вывод',`Заявка ${id} на ${money(amount)} USDT`);closeModal();refresh();toast('Заявка сохранена в браузере. Перевод средств не выполнен.')});return}
-if(['new-payin','new-payout'].includes(action)){let kind=action==='new-payin'?'Pay-In':'Pay-Out';modal('Заявка '+kind,`<p>Заявка сохраняется локально, без отправки платежа.</p><form><label class="form-field">Сумма в RUB<input name="amount" type="number" min="1" max="10000000" step="1" placeholder="10000" required></label><label class="form-field">Тип<select name="kind"><option>${kind}</option></select></label>${modalButtons.replace('Сохранить','Создать заявку')}</form>`,data=>{let amount=Number(data.get('amount'));if(!Number.isFinite(amount)||amount<1||amount>1e7)return toast('Некорректная сумма');let id=randId('MP');state.orders.unshift({id,kind,amount,currency:'RUB',status:'pending',created:new Date().toISOString()});addNotice('Новая заявка',`${kind} · ${id}`);closeModal();refresh();toast('Заявка сохранена в браузере')});return}
+if(action==='new-payin'){let kind='Pay-In';modal('Заявка '+kind,`<p>Заявка сохраняется локально, без отправки платежа.</p><form><label class="form-field">Сумма в RUB<input name="amount" type="number" min="1" max="10000000" step="1" placeholder="10000" required></label><label class="form-field">Тип<select name="kind"><option>${kind}</option></select></label>${modalButtons.replace('Сохранить','Создать заявку')}</form>`,data=>{let amount=Number(data.get('amount'));if(!Number.isFinite(amount)||amount<1||amount>1e7)return toast('Некорректная сумма');let id=randId('MP');state.orders.unshift({id,kind,amount,currency:'RUB',status:'pending',created:new Date().toISOString()});addNotice('Новая заявка',`${kind} · ${id}`);closeModal();refresh();toast('Заявка сохранена в браузере')});return}
 if(action==='new-appeal'){modal('Новая апелляция',`<form><label class="form-field">Направление<select name="kind"><option>Pay-In</option><option>Pay-Out</option></select></label><label class="form-field">Причина<input name="reason" maxlength="110" placeholder="Краткое описание спорной операции" required></label>${modalButtons}</form>`,d=>{let reason=String(d.get('reason')).trim();if(!reason)return toast('Укажите причину');state.appeals.unshift({id:randId('A'),kind:String(d.get('kind')),reason,status:'pending'});addNotice('Апелляция создана',reason);closeModal();refresh();toast('Апелляция добавлена')});return}
 if(action==='demo-info'){modal('Подключение API',`<p>Платёжная интеграция не подключена. Для автоматической обработки нужны серверная база операций, проверка платежей и API провайдера.</p><button class="secondary-button" data-modal-close="true">Понятно</button>`);return}
 if(action==='mark-read'){state.notifications.forEach(n=>n.read=true);refresh();toast('Уведомления прочитаны');return}
@@ -663,7 +814,7 @@ if(type==='order'){let r=state.orders.find(x=>x.id===id);if(!r)return;modal('З�
 }
 function exportCSV(which){let data=which==='wallet'?state.walletOps.map(x=>[x.id,x.kind,x.amount,'USDT',x.status,x.created]):state.orders.filter(x=>x.kind===(which==='payin'?'Pay-In':'Pay-Out')).map(x=>[x.id,x.kind,x.amount,x.currency,x.status,x.created]);let rows=[['ID','Тип','Сумма','Валюта','Статус','Дата'],...data];let csv='\ufeff'+rows.map(row=>row.map(v=>'"'+String(v??'').replace(/"/g,'""')+'"').join(';')).join('\r\n');let blob=new Blob([csv],{type:'text/csv;charset=utf-8'});const u=URL.createObjectURL(blob),link=document.createElement('a');link.href=u;link.download=`onlymatch-${which}-records.csv`;link.click();setTimeout(()=>URL.revokeObjectURL(u),1000);toast('Экспортированы записи из этого браузера')}
 function updatePeriod(period){dateRange=period;let to=new Date(),from=new Date(to);if(period==='yesterday'){to.setDate(to.getDate()-1);from=new Date(to)}else if(period==='7'){from.setDate(from.getDate()-6)}else if(period==='30'){from.setDate(from.getDate()-29)}let iso=d=>`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;fromDate=iso(from);toDate=iso(to);render()}
-document.addEventListener('click',e=>{let restore=e.target.closest('[data-requisite-restore]');if(restore){let r=state.records.find(x=>x.id===restore.dataset.requisiteRestore);if(r)restoreRequisite(r);return}let deleted=e.target.closest('[data-requisite-delete]');if(deleted){let r=state.records.find(x=>x.id===deleted.dataset.requisiteDelete);if(r)deleteArchivedRequisite(r);return}let edit=e.target.closest('[data-requisite-edit]');if(edit){let r=state.records.find(x=>x.id===edit.dataset.requisiteEdit);if(r)openRequisiteWizard(r);return}let link=e.target.closest('[data-go]');if(link){go(link.dataset.go);return}let a=e.target.closest('[data-action]');if(a){startAction(a.dataset.action);return}let m=e.target.closest('[data-modal-close]');if(m){closeModal();return}if(e.target.matches('[data-overlay]')){closeModal();return}let d=e.target.closest('[data-detail]');if(d){detail(d.dataset.detail);return}let tab=e.target.closest('[data-tab]');if(tab){let [page,v]=tab.dataset.tab.split(':');tabs[page]=v;render();return}let exp=e.target.closest('[data-export]');if(exp){exportCSV(exp.dataset.export);return}let period=e.target.closest('[data-period]');if(period){updatePeriod(period.dataset.period);return}});
+document.addEventListener('click',e=>{let payoutCancel=e.target.closest('[data-ps-cancel]');if(payoutCancel){cancelPayoutSearch(payoutCancel.dataset.psCancel);return}let restore=e.target.closest('[data-requisite-restore]');if(restore){let r=state.records.find(x=>x.id===restore.dataset.requisiteRestore);if(r)restoreRequisite(r);return}let deleted=e.target.closest('[data-requisite-delete]');if(deleted){let r=state.records.find(x=>x.id===deleted.dataset.requisiteDelete);if(r)deleteArchivedRequisite(r);return}let edit=e.target.closest('[data-requisite-edit]');if(edit){let r=state.records.find(x=>x.id===edit.dataset.requisiteEdit);if(r)openRequisiteWizard(r);return}let link=e.target.closest('[data-go]');if(link){go(link.dataset.go);return}let a=e.target.closest('[data-action]');if(a){startAction(a.dataset.action);return}let m=e.target.closest('[data-modal-close]');if(m){closeModal();return}if(e.target.matches('[data-overlay]')){closeModal();return}let d=e.target.closest('[data-detail]');if(d){detail(d.dataset.detail);return}let tab=e.target.closest('[data-tab]');if(tab){let [page,v]=tab.dataset.tab.split(':');tabs[page]=v;render();return}let exp=e.target.closest('[data-export]');if(exp){exportCSV(exp.dataset.export);return}let period=e.target.closest('[data-period]');if(period){updatePeriod(period.dataset.period);return}});
 document.addEventListener('change',e=>{let t=e.target;if(t.matches('[data-requisite-toggle]')){let r=state.records.find(x=>x.id===t.dataset.requisiteToggle);if(!r||r.status==='archived'){t.checked=false;return}r.status=t.checked?'active':'inactive';r.updatedAt=new Date().toISOString();refresh();toast(r.status==='active'?'Реквизит включён':'Реквизит выключен');return}if(t.id==='sidebar-work-switch'){requestWorking(t.checked,t);return}if(t.matches('[data-toggle]')){if(t.dataset.toggle==='working'){requestWorking(t.checked,t);return}state[t.dataset.toggle]=t.checked;refresh();toast('Настройка сохранена в браузере');return}if(t.matches('[data-select]')){selects[t.dataset.select]=t.value;render();return}if(t.id==='date-from'){fromDate=t.value;dateRange='';render();return}if(t.id==='date-to'){toDate=t.value;dateRange='';render();return}});
 document.addEventListener('input',e=>{let t=e.target;if(t.matches('[data-search]')){searches[t.dataset.search]=t.value;let pos=t.selectionStart;render();let next=document.querySelector(`[data-search="${t.dataset.search}"]`);if(next){next.focus();try{next.setSelectionRange(pos,pos)}catch(e){}}}});
 document.addEventListener('submit',e=>{if(e.target.id==='manual-form'||e.target.id==='qr-form'){e.preventDefault();let data=new FormData(e.target),amount=Number(data.get('amount'));if(!Number.isFinite(amount)||amount<1||amount>1e7)return toast('Проверьте сумму');let kind=e.target.id==='qr-form'?'Pay-In':'Pay-Out';let id=randId('MP');state.orders.unshift({id,kind,amount,currency:'RUB',status:'pending',created:new Date().toISOString()});addNotice('Заявка сохранена',`${id} · ${kind}`);refresh();toast('Заявка сохранена в браузере. Перевод не выполнен')}});
