@@ -409,6 +409,8 @@ function syncWorkControls(){
 function useFinance(finance){
  financeReady=true;
  confirmedFinance=finance;
+ // Share the threshold with the separate deposit-dialog module.
+ window.onlyMatchInsuranceMinimumUSDT=Number(finance.minimumInsuranceUSDT);
  state.insurance=Number(finance.confirmedInsuranceUSDT)||0;
  state.working=!!finance.working&&!!finance.workEligible;
  refresh();
@@ -969,7 +971,7 @@ function render(inner){
 const notice='';
 function selectPurpose(){
  purpose='';amount='';
- render(notice+'<p class="ice-deposit-hint">Сначала выберите, какой депозит хотите пополнить:</p><div class="ice-deposit-purpose-options"><button type="button" class="ice-deposit-purpose" data-ice-purpose="working"><strong>Рабочий депозит</strong><small>Средства для рабочего баланса трейдера</small></button><button type="button" class="ice-deposit-purpose" data-ice-purpose="insurance"><strong>Страховой депозит</strong><small>Для доступа к работе требуется '+requiredInsuranceLabel()+' подтверждённого страхового депозита</small></button></div>');
+ render(notice+'<p class="ice-deposit-hint">Сначала выберите, какой депозит хотите пополнить:</p><div class="ice-deposit-purpose-options"><button type="button" class="ice-deposit-purpose" data-ice-purpose="working"><strong>Рабочий депозит</strong><small>Средства для рабочего баланса трейдера</small></button><button type="button" class="ice-deposit-purpose" data-ice-purpose="insurance"><strong>Страховой депозит</strong><small>Для доступа к работе требуется '+Number(window.onlyMatchInsuranceMinimumUSDT??500).toLocaleString('ru-RU',{maximumFractionDigits:2})+' USDT подтверждённого страхового депозита</small></button></div>');
 }
 function amountStep(){
  if(!purposes[purpose])return selectPurpose();
