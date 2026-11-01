@@ -2,8 +2,12 @@
 const http = require('node:http');
 const {verifyTx,TREASURY,USDT_CONTRACT} = require('./tron-verify.js');
 const PORT = Number(process.env.PORT || 10000);
-const ORIGIN = 'https://muslim-pay.onrender.com';
+// All routes in this service are public and use no credentials or cookies.
+const PUBLIC_ORIGIN = '*';
 const SOURCE = 'https://api.rapira.net/open/market/rates';
+const REFERENCE_SOURCE='https://api.coingecko.com/api/v3/simple/price?ids=tether&vs_currencies=rub';
+const LAST_GOOD_TTL=10*60*1000;
+let lastGoodAt=0;
 let cache = null, cacheUntil = 0, pending = null;
 const perIp = new Map();
 function throttle(req) {
@@ -18,42 +22,50 @@ function throttle(req) {
 function json(res, status, data) {
   res.statusCode = status;
   res.setHeader('Content-Type', 'application/json; charset=utf-8');
-  res.setHeader('Access-Control-Allow-Origin', ORIGIN);
-  res.setHeader('Vary', 'Origin');
+  res.setHeader('Access-Control-Allow-Origin', PUBLIC_ORIGIN);
+  res.setHeader('X-Content-Type-Options', 'nosniff');
   res.setHeader('Cache-Control', 'public, max-age=15');
   res.end(JSON.stringify(data));
 }
-async function requestRate() {
-  const c = new AbortController();
-  const timer = setTimeout(() => c.abort(), 8500);
+async function fetchJson(url, timeout, extraHeaders) {
+  const c=new AbortController(),timer=setTimeout(()=>c.abort(),timeout);
   try {
-    const response = await fetch(SOURCE, {
-      headers: { Accept: 'application/json', 'User-Agent': 'IcePay-RapiraRate/1.0' },
-      signal: c.signal
-    });
-    if (!response.ok) throw new Error('Rapira HTTP ' + response.status);
-    const payload = await response.json();
-    const row = Array.isArray(payload.data)
-      ? payload.data.find(item => item.symbol === 'USDT/RUB') : null;
-    const bidPrice = Number(row?.bidPrice);
-    if (!Number.isFinite(bidPrice) || bidPrice <= 0 || bidPrice > 10000)
-      throw new Error('Rapira bidPrice unavailable');
-    const result = { symbol: 'USDT/RUB', bidPrice, source: 'Rapira',
-      updatedAt: new Date().toISOString(), type: 'bidPrice' };
-    cache = result;
-    cacheUntil = Date.now() + 25000;
-    return result;
-  } finally { clearTimeout(timer); }
+    const response=await fetch(url,{headers:{Accept:'application/json',...(extraHeaders||{})},signal:c.signal});
+    if(!response.ok)throw new Error('Rate source HTTP '+response.status);
+    return await response.json();
+  }finally{clearTimeout(timer);}
+}
+function validPrice(value){
+  const price=Number(value);
+  if(!Number.isFinite(price)||price<1||price>10000)throw new Error('Invalid USDT/RUB quote');
+  return price;
+}
+async function requestRate(){
+  let quote;
+  try{
+    const payload=await fetchJson(SOURCE,8500,{'User-Agent':'OnlyMatch-Quote/2.0'});
+    const market=Array.isArray(payload?.data)?payload.data.find(item=>item.symbol==='USDT/RUB'):null;
+    if(!market)throw new Error('USDT/RUB market absent');
+    const bidPrice=validPrice(market.bidPrice);
+    quote={symbol:'USDT/RUB',bidPrice,source:'Rapira',type:'bidPrice',updatedAt:new Date().toISOString()};
+  }catch(primaryError){
+    console.warn('USDT/RUB exchange quote failed, trying reference:',primaryError.message);
+    const data=await fetchJson(REFERENCE_SOURCE,8500);
+    const bidPrice=validPrice(data?.tether?.rub);
+    quote={symbol:'USDT/RUB',bidPrice,source:'CoinGecko',type:'reference',updatedAt:new Date().toISOString()};
+  }
+  cache=quote;lastGoodAt=Date.now();cacheUntil=lastGoodAt+25000;
+  return quote;
 }
 http.createServer(async (req, res) => {
   if (req.method === 'OPTIONS') {
-    res.setHeader('Access-Control-Allow-Origin', ORIGIN);
+    res.setHeader('Access-Control-Allow-Origin', PUBLIC_ORIGIN);
     res.setHeader('Access-Control-Allow-Methods', 'GET, OPTIONS');
     res.setHeader('Access-Control-Allow-Headers', 'Accept, Content-Type');
     res.statusCode = 204; return res.end();
   }
   if (req.method !== 'GET') return json(res, 405, { error: 'Method not allowed' });
-  if (req.url === '/health') return json(res, 200, { ok: true, service: 'Ice Pay rates' });
+  if (req.url === '/health') return json(res, 200, { ok: true, service: 'OnlyMatch market quotes' });
   const route=new URL(req.url,'http://localhost');
   if(route.pathname === '/trc20/config') {
     res.setHeader('Cache-Control','no-store');
@@ -80,8 +92,10 @@ http.createServer(async (req, res) => {
     if (!pending) pending = requestRate().finally(() => { pending = null; });
     return json(res, 200, await pending);
   } catch (error) {
-    console.error('Rapira rates unavailable:', error.message);
-    res.setHeader('Retry-After', '20');
-    return json(res, 503, { error: 'Rapira temporarily unavailable' });
+    console.error('USDT/RUB quote unavailable:', error.message);
+    if(cache && lastGoodAt && Date.now()-lastGoodAt<LAST_GOOD_TTL)
+      return json(res,200,{...cache,stale:true});
+    res.setHeader('Retry-After','20');
+    return json(res,503,{error:'USDT/RUB data temporarily unavailable'});
   }
-}).listen(PORT, '0.0.0.0', () => { console.log('Ice Pay rates service listening on ' + PORT); requestRate().then(r => console.log('Rapira USDT/RUB bid fetched successfully:', r.bidPrice)).catch(e => console.error('Rapira startup check failed:', e.message)); verifyTx('0'.repeat(64),'').then(r=>console.log('TRON receipt API readiness:',r.status)).catch(e=>console.error('TRON receipt API readiness failed:',e.message)); });
+}).listen(PORT, '0.0.0.0', () => { console.log('OnlyMatch market quote service listening on ' + PORT); requestRate().then(r => console.log('USDT/RUB quote fetched:', r.bidPrice, r.source)).catch(e => console.error('Quote startup check failed:', e.message)); verifyTx('0'.repeat(64),'').then(r=>console.log('TRON receipt API readiness:',r.status)).catch(e=>console.error('TRON receipt API readiness failed:',e.message)); });
