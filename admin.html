@@ -520,7 +520,23 @@ async function openFinance(trader){
  const details=await api('/v1/admin/traders/'+encodeURIComponent(trader.id)+'/finance');
  const f=details.finance,amount=Number(f.confirmedInsuranceUSDT||0),needed=Number(f.shortfallUSDT||0),minimum=Number(f.minimumInsuranceUSDT??500);
  infoDialog('Финансы · '+trader.username,
-  '<div class="info-list"><p><strong>Трейдер:</strong> '+esc(trader.username)+'</p><p><strong>Учетная запись:</strong> <code>'+esc(trader.id)+'</code></p><p><strong>Memo:</strong> <code class="code">'+esc(trader.memo||'—')+'</code></p><p><strong>Подтверждённый страховой депозит:</strong> '+amount.toFixed(2)+' USDT</p><p><strong>Индивидуальный минимум:</strong> '+minimum.toFixed(2)+' USDT</p><p><strong>Не хватает:</strong> '+needed.toFixed(2)+' USDT</p><p><strong>Допуск к работе:</strong> '+(f.workEligible?'Разрешён':'Заблокирован')+'</p><p><strong>Сейчас:</strong> '+(f.working?'В работе':'Не в работе')+'</p></div><p class="description">'+esc(f.note||'Автоматическая проверка поступлений не подключена.')+'</p>');
+  '<div class="info-list"><p><strong>Трейдер:</strong> '+esc(trader.username)+'</p><p><strong>Учетная запись:</strong> <code>'+esc(trader.id)+'</code></p><p><strong>Memo:</strong> <code class="code">'+esc(trader.memo||'—')+'</code></p><p><strong>Подтверждённый страховой депозит:</strong> '+amount.toFixed(2)+' USDT</p><p><strong>Индивидуальный минимум:</strong> '+minimum.toFixed(2)+' USDT</p><p><strong>Не хватает:</strong> '+needed.toFixed(2)+' USDT</p><p><strong>Допуск к работе:</strong> '+(f.workEligible?'Разрешён':'Заблокирован')+'</p><p><strong>Сейчас:</strong> '+(f.working?'В работе':'Не в работе')+'</p></div><p class="description">'+esc(f.note||'Автоматическая проверка поступлений не подключена.')+'</p><button class="btn primary" type="button" data-insurance-edit="'+esc(trader.id)+'">Изменить минимальный депозит</button>');
+}
+function openInsuranceMinimum(trader){
+ const current=Number(trader.finance?.minimumInsuranceUSDT??500);
+ dialog('Страховой депозит · '+trader.username,
+  '<p class="description">Установите персональную сумму страхового депозита для допуска трейдера к работе. Меняется только требование, а не баланс. Значение по умолчанию: 500 USDT.</p>'+
+  '<label class="owner-field">Минимальный страховой депозит, USDT<input name="minimumInsuranceUSDT" type="number" inputmode="decimal" min="0" max="1000000" step="0.01" required value="'+current.toFixed(2)+'"></label>'+
+  '<p class="owner-card-note">0 USDT — работа без страхового депозита. При повышении минимума сверх подтверждённого баланса работа автоматически отключается.</p>',
+  async f=>{
+   const raw=String(f.get('minimumInsuranceUSDT')??'').trim();
+   const value=Number(raw);
+   if(!raw||!Number.isFinite(value)||value<0||value>1000000||Math.abs(value*100-Math.round(value*100))>1e-7)
+    throw Error('Введите сумму от 0 до 1 000 000 USDT с точностью 0,01');
+   if(value===0&&!confirm('Установить 0 USDT? Трейдер сможет встать в работу без страхового депозита.'))
+    throw Error('Изменение не подтверждено');
+   await api('/v1/admin/traders/'+encodeURIComponent(trader.id)+'/insurance-minimum','PATCH',{minimumInsuranceUSDT:value});
+  });
 }
 async function loadTraders(){
  const d=await api('/v1/admin/traders');
@@ -542,14 +558,16 @@ function dialog(title,body,onSubmit){
  };
 }
 el('trader-rows').onclick=async e=>{
- const t=e.target.closest('[data-edit],[data-password],[data-status],[data-profile],[data-finance]');
+ const t=e.target.closest('[data-edit],[data-password],[data-status],[data-profile],[data-finance],[data-insurance-minimum]');
  if(!t)return;
- const id=t.dataset.edit||t.dataset.password||t.dataset.status||t.dataset.profile||t.dataset.finance;
+ const id=t.dataset.edit||t.dataset.password||t.dataset.status||t.dataset.profile||t.dataset.finance||t.dataset.insuranceMinimum;
  const trader=traders.find(x=>x.id===id);if(!trader)return;
  if(t.hasAttribute('data-profile')){
   infoDialog('Анкета · '+trader.username,'<p><strong>Логин:</strong> '+esc(trader.username)+'</p><p><strong>ID:</strong> '+esc(trader.id)+'</p><p><strong>Memo:</strong> '+esc(trader.memo||'—')+'</p><p><strong>Заметка:</strong> '+esc(trader.note||'—')+'</p><p><strong>Аккаунт:</strong> '+(trader.active?'Активен':'Отключён')+'</p><p><strong>Создан:</strong> '+date(trader.createdAt)+'</p>');
  }else if(t.hasAttribute('data-finance')){
   try{await openFinance(trader)}catch(err){alert(err.message)}
+ }else if(t.hasAttribute('data-insurance-minimum')){
+  openInsuranceMinimum(trader);
  }else if(t.hasAttribute('data-edit')){
   dialog('Изменить Memo · '+trader.username,
    '<p class="description">Текущий Memo: <code class="code">'+esc(trader.memo)+'</code></p><label class="owner-field">Новый Memo<input name="memo" minlength="6" maxlength="40" required value="'+esc(trader.memo)+'"></label><label class="owner-field">Причина изменения<input name="reason" maxlength="120" placeholder="Например, индивидуальный Memo"></label>',
@@ -570,11 +588,13 @@ el('owner-password-btn').onclick=()=>{
  async f=>{await api('/v1/auth/change-password','POST',{currentPassword:f.get('current'),newPassword:f.get('next')});sessionStorage.removeItem(TOKEN);location.reload()});
 };
 el('dialog-root').onclick=e=>{
+ const edit=e.target.closest('[data-insurance-edit]');
+ if(edit){const trader=traders.find(x=>x.id===edit.dataset.insuranceEdit);if(trader)openInsuranceMinimum(trader);return;}
  if(e.target.closest('[data-close-dialog]')||e.target.hasAttribute('data-close-overlay'))el('dialog-root').replaceChildren();
 };
 el('refresh-traders').onclick=()=>loadTraders().catch(e=>alert(e.message));
 el('refresh-finance').onclick=()=>loadTraders().catch(e=>alert(e.message));
-el('finance-rows').onclick=async e=>{const btn=e.target.closest('[data-finance]');if(!btn)return;const trader=traders.find(x=>x.id===btn.dataset.finance);if(!trader)return;try{await openFinance(trader)}catch(err){alert(err.message)}};
+el('finance-rows').onclick=async e=>{const btn=e.target.closest('[data-finance],[data-insurance-minimum]');if(!btn)return;const trader=traders.find(x=>x.id===(btn.dataset.finance||btn.dataset.insuranceMinimum));if(!trader)return;if(btn.hasAttribute('data-insurance-minimum')){openInsuranceMinimum(trader);return;}try{await openFinance(trader)}catch(err){alert(err.message)}};
 el('trader-search').oninput=drawTraders;
 document.addEventListener('keydown',e=>{if(e.key==='Escape')el('dialog-root').replaceChildren()});
 
