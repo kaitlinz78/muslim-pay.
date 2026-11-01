@@ -817,55 +817,56 @@ $('#open-menu').addEventListener('click',openSidebar);$('#sidebar-close').addEve
 })();
 </script>
 <script id="onlymatch-market-rate">
+/* OnlyMatch market quote: verified Rapira USDT/RUB bid, never FX or reference fallback. */
 (()=>{
  'use strict';
- const API={
-  market:'https://api.rapira.net/open/market/rates',
-  proxy:'https://ice-pay-rates.onrender.com/rate',
-  reference:'https://api.coingecko.com/api/v3/simple/price?ids=tether&vs_currencies=rub'
- };
- const STORAGE_KEY='onlymatch-usdt-rub-last-quote-v2';
- const STALE_LIMIT=10*60*1000;
+ const RAPIRA_API='https://api.rapira.net/open/market/rates';
+ const MARKET_PROXY='https://ice-pay-rates.onrender.com/rate';
+ const STORAGE_KEY='onlymatch-rapira-usdt-rub-market-v3';
+ const MAX_AGE=5*60*1000;
+ const REFRESH_MS=30000;
  let quote=null,loading=false;
- function priceOf(x){
-  const price=Number(x);
-  if(!Number.isFinite(price)||price<1||price>10000)throw new Error('Invalid rate');
-  return price;
+ const now=()=>Date.now();
+ function validPrice(value){
+  const n=Number(value);
+  if(!Number.isFinite(n)||n<=0||n>10000)throw new Error('Invalid market bid');
+  return n;
  }
- function marketQuote(data){
-  const row=Array.isArray(data?.data)?data.data.find(x=>x.symbol==='USDT/RUB'):data;
-  if(!row||row.symbol!=='USDT/RUB')throw new Error('Pair absent');
-  return {price:priceOf(row.bidPrice),kind:'market',time:Date.now(),stale:false};
+ function parseRapira(payload){
+  const row=payload?.data?.find?.(item=>item.symbol==='USDT/RUB');
+  if(!row)throw new Error('USDT/RUB pair missing');
+  return {price:validPrice(row.bidPrice),time:now(),stale:false};
  }
- function proxyQuote(data){
-  if(data?.symbol!=='USDT/RUB')throw new Error('Unexpected pair');
-  const time=Date.parse(data.updatedAt);
-  const age=Number.isFinite(time)?Date.now()-time:Infinity;
-  if(age>STALE_LIMIT||age<-(2*60*1000))throw new Error('Expired server quote');
-  return {price:priceOf(data.bidPrice),kind:data.type==='reference'?'reference':'market',time,stale:!!data.stale};
- }
- function referenceQuote(data){
-  return {price:priceOf(data?.tether?.rub),kind:'reference',time:Date.now(),stale:false};
+ function parseMarketProxy(payload){
+  if(payload?.symbol!=='USDT/RUB')throw new Error('Unexpected market pair');
+  // Never silently replace Rapira quotes with a USDT/USD, central bank or reference FX rate.
+  const source=String(payload.type||'')+' '+String(payload.source||'')+' '+String(payload.provider||'');
+  if(/reference|coingecko|fallback|central.?bank|cbr|fx/i.test(source))throw new Error('Not a Rapira market quote');
+  const time=Date.parse(payload.updatedAt);
+  const age=now()-time;
+  if(!Number.isFinite(time)||age<-(2*60*1000)||age>MAX_AGE)throw new Error('Stale proxy quote');
+  return {price:validPrice(payload.bidPrice),time,stale:false};
  }
  function fromCache(){
-  try {
-   const data=JSON.parse(localStorage.getItem(STORAGE_KEY)||'null');
-   if(!data||!Number.isFinite(data.time)||Date.now()-data.time>STALE_LIMIT||data.time>Date.now()+120000)return null;
-   return {price:priceOf(data.price),kind:data.kind==='reference'?'reference':'market',time:data.time,stale:true};
+  try{
+   const cached=JSON.parse(localStorage.getItem(STORAGE_KEY)||'null');
+   const age=now()-cached?.time;
+   if(!Number.isFinite(age)||age<0||age>MAX_AGE)return null;
+   return {price:validPrice(cached.price),time:cached.time,stale:true};
   }catch{return null;}
  }
- function persist(data){
-  try{localStorage.setItem(STORAGE_KEY,JSON.stringify({price:data.price,kind:data.kind,time:data.time}));}catch{}
+ function saveQuote(value){
+  try{localStorage.setItem(STORAGE_KEY,JSON.stringify({price:value.price,time:value.time}));}catch{}
  }
- function present(){
-  let text='Курс недоступен',note='Нет актуальных данных';
-  if(quote){
-   text=quote.price.toLocaleString('ru-RU',{minimumFractionDigits:2,maximumFractionDigits:2})+' ₽ / USDT';
+ function render(){
+  let value='Курс недоступен',caption='Нет подтверждённых рыночных данных';
+  if(quote&&now()-quote.time<=MAX_AGE){
+   value=quote.price.toLocaleString('ru-RU',{minimumFractionDigits:2,maximumFractionDigits:2})+' ₽ / USDT';
    const clock=new Date(quote.time).toLocaleTimeString('ru-RU',{hour:'2-digit',minute:'2-digit'});
-   note=(quote.stale?'Последний доступный':quote.kind==='reference'?'Ориентировочный':'Рыночный курс продажи')+' · '+clock;
+   caption=(quote.stale?'Последний подтверждённый курс':'Рыночный курс продажи')+' · '+clock;
   }
-  for(const el of document.querySelectorAll('[data-usdt-rub-rate]'))if(el.textContent!==text)el.textContent=text;
-  for(const el of document.querySelectorAll('[data-usdt-rub-status]'))if(el.textContent!==note)el.textContent=note;
+  for(const el of document.querySelectorAll('[data-usdt-rub-rate]'))if(el.textContent!==value)el.textContent=value;
+  for(const el of document.querySelectorAll('[data-usdt-rub-status]'))if(el.textContent!==caption)el.textContent=caption;
  }
  async function loadJson(url,timeout){
   const controller=new AbortController();
@@ -876,38 +877,40 @@ $('#open-menu').addEventListener('click',openSidebar);$('#sidebar-close').addEve
    return await response.json();
   }finally{clearTimeout(timer);}
  }
- async function fetchRate(){
-  // Two independent paths for market bids; reference prices are a labelled fallback.
-  const marketDirect=loadJson(API.market,6500).then(marketQuote);
-  const marketProxy=loadJson(API.proxy,12000).then(proxyQuote);
-  const reference=new Promise((resolve,reject)=>setTimeout(()=>{
-   loadJson(API.reference,7500).then(referenceQuote).then(resolve,reject);
-  },3000));
-  return Promise.any([marketDirect,marketProxy,reference]);
+ async function currentMarketQuote(){
+  // Direct official market API has priority; the proxy is only a market-data fallback.
+  try{
+   return parseRapira(await loadJson(RAPIRA_API,6500));
+  }catch(directError){
+   try{
+    return parseMarketProxy(await loadJson(MARKET_PROXY,8000));
+   }catch(proxyError){
+    console.warn('OnlyMatch: Rapira quote unavailable',directError,proxyError);
+    throw proxyError;
+   }
+  }
  }
  async function refreshRate(){
   if(loading)return;
   if(navigator.onLine===false){
-   if(!quote||Date.now()-quote.time>STALE_LIMIT)quote=fromCache();
+   if(!quote||now()-quote.time>MAX_AGE)quote=fromCache();
    if(quote)quote.stale=true;
-   present();
+   render();
    return;
   }
   loading=true;
   try{
-   const next=await fetchRate();
-   quote=next;
-   if(!next.stale)persist(next);
-  }catch(error){
-   console.warn('OnlyMatch USDT/RUB quote temporarily unavailable',error);
-   if(!quote||Date.now()-quote.time>STALE_LIMIT)quote=fromCache();
+   const fresh=await currentMarketQuote();
+   quote=fresh;saveQuote(fresh);
+  }catch{
+   if(!quote||now()-quote.time>MAX_AGE)quote=fromCache();
    if(quote)quote.stale=true;
-  }finally{loading=false;present();}
+  }finally{loading=false;render();}
  }
- quote=fromCache();present();refreshRate();
+ quote=fromCache();render();refreshRate();
  const page=document.querySelector('#page');
- if(page)new MutationObserver(present).observe(page,{childList:true});
- setInterval(()=>{if(!document.hidden)refreshRate()},60000);
+ if(page)new MutationObserver(render).observe(page,{childList:true});
+ setInterval(()=>{if(!document.hidden)refreshRate();else render();},REFRESH_MS);
  document.addEventListener('visibilitychange',()=>{if(!document.hidden)refreshRate()});
  window.addEventListener('online',refreshRate);
 })();
