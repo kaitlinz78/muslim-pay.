@@ -295,7 +295,7 @@ async function handle(req,res) {
     if(account.role!=='trader')throw issue(403,'Доступ только трейдеру');
     const body=await parseBody(req);
     const order=await manualDeposits.create(account.id,body.purpose,body.amount,body.txid);
-    await recordAudit('deposit.submitted',{id:order.id,accountId:account.id,username:account.username,purpose:order.purpose,amountUSDT:order.amountUSDT});
+    await recordAudit('deposit.submitted',{id:order.id,accountId:account.id,username:account.username,purpose:order.purpose,amountUSDT:order.amountUSDT}).catch(e=>console.warn('[OnlyMatch audit deposit submitted]',e.message));
     return reply(res,201,{order},origin);
   }
   if(req.method==='GET'&&url.pathname==='/v1/trader/trc20/config'){
@@ -445,7 +445,7 @@ async function handle(req,res) {
     const decision=manualDecision[2]==='approve'?'credited':'rejected';
     const order=await manualDeposits.decide(manualDecision[1],account.id,decision);
     const trader=await getAcc(order.accountId);
-    await recordAudit('deposit.'+decision,{id:order.id,accountId:order.accountId,username:trader?.username||'',purpose:order.purpose,amountUSDT:order.amountUSDT,owner:account.username});
+    await recordAudit('deposit.'+decision,{id:order.id,accountId:order.accountId,username:trader?.username||'',purpose:order.purpose,amountUSDT:order.amountUSDT,owner:account.username}).catch(e=>console.warn('[OnlyMatch audit deposit decision]',e.message));
     return reply(res,200,{order,finance:trader?await financeOf(trader):null},origin);
   }
   if(req.method==='GET'&&url.pathname==='/v1/admin/trc20/orders'){
