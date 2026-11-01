@@ -267,7 +267,9 @@ html[data-om-theme="graphite"] .om-nav-item.active .om-nav-icon{background:#344b
         <div class="card-head"><h2>Финансы трейдеров</h2><button class="btn" id="refresh-finance" type="button">Обновить балансы</button></div>
         <p class="description">Для каждого трейдера можно задать свой минимальный страховой депозит. По умолчанию — <strong>500 USDT</strong>. В допуске учитываются только подтверждённые сервером средства, а не локальные суммы или неподтверждённые заявки.</p>
         <div class="tablewrap"><table><thead><tr><th>Трейдер</th><th>Memo</th><th>Страховой депозит</th><th>Минимум</th><th>До допуска</th><th>Рабочий статус</th><th>Действия</th></tr></thead><tbody id="finance-rows"><tr><td colspan="7" class="empty">Загрузка…</td></tr></tbody></table></div>
-        <p class="owner-card-note" style="margin-top:15px">Подтверждение депозитов через платёжного провайдера ещё не подключено. До появления подтверждённой записи баланс составляет 0 USDT, работа остаётся заблокированной. Отображаемые суммы нельзя считать независимым доказательством получения средств.</p>
+        <p class="owner-card-note" style="margin-top:15px">Средства зачисляются на соответствующий баланс только после проверки подтверждённого перевода USDT TRC20. Наличие TXID без подтверждения не является оплатой.</p>
+        <div class="card-head" style="margin-top:24px"><div><h2>Заявки на пополнение USDT</h2><p class="description">Ожидают проверки: <strong id="om-deposit-count">0</strong>. Нажмите на TXID, чтобы открыть транзакцию в TRON.</p></div><button class="btn" type="button" id="om-deposit-refresh">Обновить заявки</button></div>
+        <div class="tablewrap"><table><thead><tr><th>Трейдер</th><th>Тип</th><th>Сумма</th><th>TXID</th><th>Создана</th><th>Статус</th><th>Действия</th></tr></thead><tbody id="om-deposit-rows"><tr><td colspan="7" class="empty">Загрузка заявок…</td></tr></tbody></table></div>
       </section>
       
 <section class="owner-tab-panel" id="tab-overview">
@@ -275,7 +277,7 @@ html[data-om-theme="graphite"] .om-nav-item.active .om-nav-icon{background:#344b
     <div class="om-kpi"><span>Всего трейдеров</span><strong id="om-count-traders">—</strong><small>Зарегистрированные аккаунты</small></div>
     <div class="om-kpi"><span>Активные аккаунты</span><strong id="om-count-active">—</strong><small>Доступ к личному кабинету</small></div>
     <div class="om-kpi"><span>Персональные Memo</span><strong id="om-count-memos">—</strong><small>Назначены сервером</small></div>
-    <div class="om-kpi"><span>Подтверждённый страховой депозит</span><strong id="om-count-insurance">—</strong><small>USDT · без начислений вручную</small></div>
+    <div class="om-kpi"><span>Подтверждённый страховой депозит</span><strong id="om-count-insurance">—</strong><small>USDT · подтверждённые пополнения</small></div>
   </div>
   <div class="om-section-grid">
     <section class="card"><div class="card-head"><h2>Быстрое управление</h2><span class="om-tag">Owner</span></div>
@@ -410,7 +412,7 @@ html[data-om-theme="graphite"] .om-nav-item.active .om-nav-icon{background:#344b
 const API='https://ice-pay-auth.onrender.com',TOKEN='ice-pay-owner-token';
 const el=id=>document.getElementById(id);
 const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-let traders=[],activity=[],deletedRequisites=[],merchants=[],activeTab='overview';
+let traders=[],activity=[],deletedRequisites=[],merchants=[],depositRequests=[],activeTab='overview';
 const TABS=["overview","activity","traders","add","memo","finance","payin","payout","requisites","disputes","analytics","merchants","limits","appearance","staff","integrations","security"];
 const TAB_NAMES={"overview":["Обзор платформы","Операционные показатели и управление"],"activity":["Лента событий","Серверный журнал действий"],"traders":["Все трейдеры","Аккаунты, доступ, пароли и профили"],"add":["Добавить трейдера","Создание личного кабинета"],"memo":["Управление Memo","Уникальные идентификаторы TON"],"finance":["Финансы и депозиты","Подтверждённые страховые депозиты"],"payin":["Pay-In","Входящие заявки и маршрутизация"],"payout":["Pay-Out","Очередь выплат и контроль обработки"],"requisites":["Реквизиты","Справочник и распределение платежей"],"disputes":["Апелляции","Работа со спорными операциями"],"analytics":["Аналитика","Показатели аккаунтов и финансов"],"limits":["Лимиты и комиссии","Предварительные параметры конфигурации"],"appearance":["Темы оформления","Настройки внешнего вида Owner"],"staff":["Сотрудники и роли","Разграничение полномочий"],"integrations":["Интеграции","Проверки API и компонентов"],"security":["Безопасность","Пароль Owner и управление доступом"],"merchants":["Мерчанты и интеграции","Управление партнёрами и подготовка подключений"]};
 async function api(path,method='GET',data){
@@ -481,6 +483,7 @@ function switchTab(tab){
  if(tab==='overview')loadOwnerOverview().catch(()=>{});
  if(tab==='integrations')checkSystem().catch(()=>{});
  if(tab==='merchants')loadMerchants().catch(e=>merchantError(e.message));
+ if(tab==='finance')loadDepositRequests().catch(e=>{el('om-deposit-rows').innerHTML='<tr><td colspan="7" class="empty">'+esc(e.message)+'</td></tr>';});
  if(tab==='limits')fillLimits();
  if(tab==='appearance')refreshThemeControls();
  window.scrollTo({top:0,behavior:'smooth'});
@@ -503,6 +506,24 @@ function drawTraders(){
  const query=el('trader-search').value.trim().toLowerCase();
  const list=traders.filter(t=>[t.username,t.memo,t.note].some(x=>String(x||'').toLowerCase().includes(query)));
  el('trader-rows').innerHTML=list.map(t=>'<tr><td data-label="Трейдер"><div><span class="name">'+esc(t.username)+'</span><span class="user-id">'+esc(t.id)+'</span></div></td><td data-label="Заметка"><span class="owner-card-note">'+esc(t.note||'—')+'</span></td><td data-label="Memo"><code class="code">'+esc(t.memo||'—')+'</code></td><td data-label="Статус"><span class="owner-pill '+(t.active?'':'off')+'">'+(t.active?'Активен':'Отключён')+'</span></td><td data-label="Действия"><div class="tools"><button class="btn" data-profile="'+esc(t.id)+'">Анкета</button><button class="btn" data-edit="'+esc(t.id)+'">Изменить Memo</button><button class="btn" data-finance="'+esc(t.id)+'">Финансы</button><button class="btn" data-insurance-minimum="'+esc(t.id)+'">Мин. депозит</button><button class="btn" data-password="'+esc(t.id)+'">Пароль</button><button class="btn" data-status="'+esc(t.id)+'">'+(t.active?'Отключить':'Включить')+'</button></div></td></tr>').join('')||'<tr><td colspan="5" class="empty">Трейдеров нет</td></tr>';
+}
+function renderDepositRequests(){
+ const pending=depositRequests.filter(r=>r.status==='pending').length;
+ el('om-deposit-count').textContent=String(pending);
+ const rows=[...depositRequests].sort((a,b)=>Number(a.status!=='pending')-Number(b.status!=='pending')||new Date(b.createdAt)-new Date(a.createdAt));
+ el('om-deposit-rows').innerHTML=rows.map(r=>{
+  const trader=traders.find(t=>t.id===r.accountId),name=trader?.username||r.accountId||'—';
+  const link=/^[a-f0-9]{64}$/i.test(r.txid||'')?'<a href="https://tronscan.org/#/transaction/'+esc(r.txid)+'" rel="noopener noreferrer" target="_blank"><code>'+esc(r.txid.slice(0,12))+'…'+esc(r.txid.slice(-8))+'</code></a>':'—';
+  const status=r.status==='credited'?'Зачислено':r.status==='rejected'?'Отклонено':'Ожидает проверки';
+  const actions=r.status==='pending'?'<div class="tools"><button type="button" class="btn primary" data-deposit-action="approve" data-deposit-id="'+esc(r.id)+'">Зачислить</button><button type="button" class="btn" data-deposit-action="reject" data-deposit-id="'+esc(r.id)+'">Отклонить</button></div>':'—';
+  const dt=r.createdAt?new Date(r.createdAt).toLocaleString('ru-RU'):'—';
+  return '<tr><td data-label="Трейдер"><strong>'+esc(name)+'</strong></td><td data-label="Тип">'+(r.purpose==='insurance'?'Страховой':'Рабочий')+'</td><td data-label="Сумма"><strong>'+esc(r.amountUSDT)+' USDT</strong></td><td data-label="TXID">'+link+'</td><td data-label="Создана">'+esc(dt)+'</td><td data-label="Статус"><span class="owner-pill '+(r.status==='rejected'?'off':'')+'">'+status+'</span></td><td data-label="Действия">'+actions+'</td></tr>';
+ }).join('')||'<tr><td colspan="7" class="empty">Заявок на пополнение пока нет</td></tr>';
+}
+async function loadDepositRequests(){
+ const d=await api('/v1/admin/deposit-requests');
+ depositRequests=Array.isArray(d.orders)?d.orders:[];
+ renderDepositRequests();
 }
 function drawFinance(){
  const rows=traders.map(t=>{
@@ -541,6 +562,7 @@ function openInsuranceMinimum(trader){
 async function loadTraders(){
  const d=await api('/v1/admin/traders');
  traders=d.traders||[];drawTraders();drawFinance();drawDirectory();updateOverview();renderAnalytics();
+ if(activeTab==='finance')renderDepositRequests();
  if(activeTab==='memo'){
   const h=await api('/v1/admin/memo-history');
   const records=h.history||[];
@@ -593,7 +615,27 @@ el('dialog-root').onclick=e=>{
  if(e.target.closest('[data-close-dialog]')||e.target.hasAttribute('data-close-overlay'))el('dialog-root').replaceChildren();
 };
 el('refresh-traders').onclick=()=>loadTraders().catch(e=>alert(e.message));
-el('refresh-finance').onclick=()=>loadTraders().catch(e=>alert(e.message));
+el('refresh-finance').onclick=()=>Promise.all([loadTraders(),loadDepositRequests()]).catch(e=>alert(e.message));
+el('om-deposit-refresh').onclick=()=>loadDepositRequests().catch(e=>alert(e.message));
+el('om-deposit-rows').onclick=async e=>{
+ const button=e.target.closest('[data-deposit-action]');
+ if(!button)return;
+ const order=depositRequests.find(x=>x.id===button.dataset.depositId);
+ if(!order||order.status!=='pending')return;
+ const approve=button.dataset.depositAction==='approve';
+ const action=approve?'approve':'reject';
+ const title=approve?'Проверить перевод в TRON и зачислить':'Отклонить заявку';
+ if(!confirm(title+' '+order.amountUSDT+' USDT ('+(order.purpose==='insurance'?'страховой':'рабочий')+')?'))return;
+ button.disabled=true;
+ try{
+  await api('/v1/admin/deposit-requests/'+encodeURIComponent(order.id)+'/'+action,'POST');
+  await Promise.all([loadDepositRequests(),loadTraders()]);
+ }catch(err){alert(err.message);button.disabled=false}
+};
+setInterval(()=>{
+ if(document.visibilityState==='visible'&&document.documentElement.classList.contains('owner-authenticated')&&activeTab==='finance')
+  loadDepositRequests().catch(()=>{});
+},12000);
 el('finance-rows').onclick=async e=>{const btn=e.target.closest('[data-finance],[data-insurance-minimum]');if(!btn)return;const trader=traders.find(x=>x.id===(btn.dataset.finance||btn.dataset.insuranceMinimum));if(!trader)return;if(btn.hasAttribute('data-insurance-minimum')){openInsuranceMinimum(trader);return;}try{await openFinance(trader)}catch(err){alert(err.message)}};
 el('trader-search').oninput=drawTraders;
 document.addEventListener('keydown',e=>{if(e.key==='Escape')el('dialog-root').replaceChildren()});
