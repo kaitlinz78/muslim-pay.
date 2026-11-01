@@ -3,7 +3,7 @@
 'use strict';
 const address='TGfwabyvWcCC9wHJLbqiE7x9P5GDsnD63J';
 const contract='TR7NHqjeKQxGTCi8q8ZY4pL8otSzgjLj6t';
-const verifyUrl='https://ice-pay-rates.onrender.com/trc20/verify';
+
 const root=document.getElementById('modal-root');
 if(!root)return;
 const labels={working:'Рабочий депозит',insurance:'Страховой депозит'};
@@ -41,7 +41,7 @@ function summaryStep(){
  '<label class="ice-deposit-label" for="ice-deposit-txid">TxID перевода</label>'+
  '<input id="ice-deposit-txid" maxlength="64" autocapitalize="off" autocomplete="off" spellcheck="false" placeholder="64 символа хэша">'+
  '<button class="ice-deposit-primary" type="button" data-ice-copy="txid">Скопировать TxID для рабочего чата</button>'+
- '<button class="ice-deposit-secondary" type="button" data-ice-verify>Проверить перевод по TxID</button>'+
+
  '<div id="ice-deposit-result" role="status" aria-live="polite"></div></div>'+
  '<details class="ice-deposit-contract"><summary>Контракт USDT TRC20</summary><code>'+esc(contract)+'</code></details>'+
  '<button class="ice-deposit-back" data-ice-back="amount" type="button">← Изменить сумму</button>');
@@ -72,24 +72,6 @@ document.addEventListener('click',async e=>{
   catch(err){if(status)status.textContent=err.message;}
   return;
  }
- const button=e.target.closest('[data-ice-verify]');
- if(!button)return;
- const status=statusEl();
- const txid=root.querySelector('#ice-deposit-txid')?.value.trim()||'';
- if(!/^[a-f0-9]{64}$/i.test(txid)){if(status)status.textContent='Введите корректный TxID из 64 символов.';return;}
- button.disabled=true;if(status)status.textContent='Проверяем транзакцию в TRON…';
- try{
-  const controller=new AbortController(),timer=setTimeout(()=>controller.abort(),14000);
-  let response;
-  try{response=await fetch(verifyUrl+'?txid='+encodeURIComponent(txid)+'&amount='+encodeURIComponent(amount),{signal:controller.signal,cache:'no-store'});}
-  finally{clearTimeout(timer);}
-  const data=await response.json().catch(()=>({}));
-  if(!response.ok)throw Error(data.message||'Сервис проверки не ответил.');
-  if(status)status.textContent=data.status==='confirmed'
-    ?'Перевод подтверждён сетью TRON. Отправьте TxID в рабочий чат для подтверждения зачисления.'
-    :(data.message||'Перевод ещё не подтверждён. Проверьте TxID и сеть.');
- }catch(err){if(status)status.textContent='Не удалось проверить TxID автоматически. Отправьте TxID в рабочий чат для проверки сотрудником.';}
- finally{button.disabled=false;}
 },true);
 document.addEventListener('submit',e=>{
  if(e.target.id!=='ice-deposit-form')return;
