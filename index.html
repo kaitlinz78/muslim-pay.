@@ -327,6 +327,41 @@ html[data-ice-mode="dark"] .om-req-delete{color:#ff7799;background:rgba(240,70,9
 .om-ps-table td{vertical-align:middle}
 @media(max-width:520px){.om-ps-limits,.om-ps-review{grid-template-columns:1fr}.om-ps-steps span{font-size:10px;padding:10px 6px}}
 </style>
+<style id="onlymatch-mobile-dark-contrast-fix">
+/* Mobile-only: keep the menu control and table cards within the selected
+   dark palette. The legacy phone CSS hardcoded white backgrounds. */
+@media (max-width:800px) {
+  html[data-ice-mode="dark"] #open-menu.menu-button,
+  html[data-ice-mode="dark"] #open-menu.menu-button[aria-expanded="true"] {
+    background:var(--ui-card)!important;
+    border:1px solid var(--ui-border)!important;
+    color:var(--ui-ink)!important;
+    box-shadow:0 5px 16px rgba(0,0,0,.18)!important;
+  }
+  html[data-ice-mode="dark"] #open-menu .menu-text {
+    color:var(--ui-ink)!important;
+  }
+  html[data-ice-mode="dark"] #open-menu .ice-mobile-menu-icon {
+    color:var(--ui-main)!important;
+    background:var(--ui-soft)!important;
+    border:1px solid var(--ui-border)!important;
+    box-shadow:none!important;
+  }
+  html[data-ice-mode="dark"] .data-table tbody tr,
+  html[data-ice-mode="dark"] .data-table tbody tr:hover,
+  html[data-ice-mode="dark"] .data-table tbody tr:focus-within {
+    background:var(--ui-card)!important;
+    border:1px solid var(--ui-border)!important;
+    box-shadow:none!important;
+    color:var(--ui-ink)!important;
+  }
+  html[data-ice-mode="dark"] .data-table tbody tr td[colspan] {
+    background:var(--ui-card)!important;
+    color:var(--ui-muted)!important;
+    border-color:var(--ui-border)!important;
+  }
+}
+</style>
 </head>
 <body>
   <div class="shell" id="shell">
