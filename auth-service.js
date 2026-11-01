@@ -77,12 +77,18 @@ async function financeOf(account) {
   const raw = await storage.get(key('finance:verified-insurance:' + account.id));
   const parsed = typeof raw==='string' && /^(?:0|[1-9]\d{0,8})(?:\.\d{1,2})?$/.test(raw) ? Number(raw) : 0;
   const confirmedInsuranceUSDT = Number.isFinite(parsed) ? Math.max(0, parsed) : 0;
-  const workEligible = confirmedInsuranceUSDT >= MIN_INSURANCE_USDT;
+  // Owner-defined per-trader requirement; legacy accounts retain 500 USDT.
+  // Store integer cents to avoid precision errors. This is a requirement only,
+  // never a substitute for verified deposits.
+  const cents=account.minimumInsuranceCents;
+  const minimumInsuranceUSDT=Number.isSafeInteger(cents) && cents>=0 && cents<=100000000
+    ? cents/100 : MIN_INSURANCE_USDT;
+  const workEligible = confirmedInsuranceUSDT >= minimumInsuranceUSDT;
   return {
     accountId: account.id,
     confirmedInsuranceUSDT,
-    minimumInsuranceUSDT: MIN_INSURANCE_USDT,
-    shortfallUSDT: Math.max(0, Math.round((MIN_INSURANCE_USDT-confirmedInsuranceUSDT)*100)/100),
+    minimumInsuranceUSDT,
+    shortfallUSDT: Math.max(0, Math.round((minimumInsuranceUSDT-confirmedInsuranceUSDT)*100)/100),
     workEligible,
     working: workEligible && !!account.working,
     verification: raw === null ? 'not_connected' : 'server_verified',
@@ -269,7 +275,7 @@ async function handle(req,res) {
     if(typeof data.working!=='boolean')throw issue(400,'Передайте working=true или false');
     const finance=await financeOf(account);
     if(data.working && !finance.workEligible)
-      throw issue(403,'Для начала работы нужен подтверждённый страховой депозит от 500 USDT');
+      throw issue(403,'Для начала работы нужен подтверждённый страховой депозит от '+finance.minimumInsuranceUSDT.toFixed(2)+' USDT');
     account.working=data.working;
     await saveAcc(account);
     return reply(res,200,{ok:true,finance:await financeOf(account)},origin);
@@ -408,6 +414,28 @@ async function handle(req,res) {
     const trader=await getAcc(financeRoute[1]);
     if(!trader||trader.role!=='trader')throw issue(404,'Трейдер не найден');
     return reply(res,200,{trader:toPublic(trader),finance:await financeOf(trader)},origin);
+  }
+  const insuranceMinimumRoute=url.pathname.match(/^\/v1\/admin\/traders\/([a-f0-9-]{36})\/insurance-minimum$/);
+  if(req.method==='PATCH'&&insuranceMinimumRoute){
+    const trader=await getAcc(insuranceMinimumRoute[1]);
+    if(!trader||trader.role!=='trader')throw issue(404,'Трейдер не найден');
+    const data=await parseBody(req);
+    const amount=data.minimumInsuranceUSDT;
+    if(typeof amount!=='number'||!Number.isFinite(amount)||amount<0||amount>1000000
+       ||Math.abs(amount*100-Math.round(amount*100))>1e-7)
+      throw issue(400,'Укажите сумму от 0 до 1 000 000 USDT с точностью 0,01');
+    const oldMinimum=(await financeOf(trader)).minimumInsuranceUSDT;
+    const newCents=Math.round(amount*100);
+    trader.minimumInsuranceCents=newCents;
+    const updatedFinance=await financeOf(trader);
+    // Raising the requirement must immediately revoke active work when short.
+    if(!updatedFinance.workEligible)trader.working=false;
+    await saveAcc(trader);
+    await recordAudit('trader.insurance_minimum_changed',{
+      id:trader.id,username:trader.username,
+      previousMinimumUSDT:oldMinimum,newMinimumUSDT:newCents/100
+    });
+    return reply(res,200,{ok:true,trader:toPublic(trader),finance:await financeOf(trader)},origin);
   }
   if(req.method==='POST'&&url.pathname==='/v1/admin/traders'){
     const data=await parseBody(req);
