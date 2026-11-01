@@ -90,8 +90,16 @@ input,select,textarea,.date-field input{color:#244164;background:#fff;border:1px
 [data-rapira-rate]{font-variant-numeric:tabular-nums}
 .ice-insurance-gate-label{display:block;font-size:11px;font-weight:800;line-height:1.55;color:var(--ui-main,#e12b55)!important;text-shadow:0 0 9px var(--ui-glow,rgba(225,43,85,.12));margin:7px 0 3px;padding:0 5px;max-width:100%;overflow-wrap:anywhere}
 #sidebar-work-switch + .switch{cursor:pointer}
-.ice-insurance-gate-label.ice-insurance-flash{animation:om-insurance-soft-flash 1.25s ease-in-out 1}
-@keyframes om-insurance-soft-flash{0%{opacity:.52;filter:brightness(.95)}22%{opacity:1;filter:brightness(1.42)}47%{opacity:.72;filter:brightness(1.04)}73%{opacity:1;filter:brightness(1.23)}100%{opacity:1;filter:brightness(1)}}
+.ice-insurance-gate-label.ice-insurance-flash{
+  font-weight:900;
+  border-radius:9px;
+  animation:om-insurance-soft-flash 1.55s ease-in-out 1;
+}
+@keyframes om-insurance-soft-flash{
+  0%,43%,70%,100%{opacity:1;filter:brightness(1);background:transparent;box-shadow:none;text-shadow:0 0 3px rgba(240,67,109,.15)}
+  12%,57%{opacity:1;filter:brightness(1.85);background:rgba(255,70,126,.20);box-shadow:0 0 16px rgba(255,61,119,.50),inset 0 0 10px rgba(255,80,133,.15);text-shadow:0 0 9px rgba(255,62,117,.95),0 0 22px rgba(255,62,117,.62)}
+  28%,82%{opacity:.67;filter:brightness(.9);background:transparent;box-shadow:none;text-shadow:none}
+}
 @media(prefers-reduced-motion:reduce){.ice-insurance-gate-label.ice-insurance-flash{animation:none}}
 </style>
 <style id="ice-deposit-preview-css">
@@ -363,7 +371,7 @@ let financeReady=false,confirmedFinance=null;
 const MIN_INSURANCE_USDT=500;
 const AUTH_SERVICE='https://ice-pay-auth.onrender.com';
 const canStartWork=()=>financeReady&&!!confirmedFinance?.workEligible;
-const financeGateText=()=>!financeReady?'Проверка страхового депозита…':canStartWork()?'Страховой депозит подтверждён. Работа доступна.':'Для работы нужен подтверждённый страховой депозит 500 USDT.';
+const financeGateText=()=>!financeReady?'Проверка страхового депозита…':canStartWork()?'Страховой депозит подтверждён. Работа доступна.':'Для работы нужен подтверждённый страховой депозит.';
 function syncWorkControls(){
  for(const input of document.querySelectorAll('#sidebar-work-switch,[data-toggle="working"]')){
   input.checked=!!state.working;
@@ -403,7 +411,7 @@ function denyUnverifiedWork(input){
   syncWorkControls();
   const note=document.getElementById('ice-insurance-gate-label');
   if(note){
-   note.textContent='Для работы нужен подтверждённый страховой депозит 500 USDT.';
+   note.textContent='Для работы нужен подтверждённый страховой депозит.';
    note.classList.remove('ice-insurance-flash');
    void note.offsetWidth;
    note.classList.add('ice-insurance-flash');
