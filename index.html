@@ -390,10 +390,12 @@ let state=load();
 state.working=false;
 state.insurance=0;
 let financeReady=false,confirmedFinance=null;
-const MIN_INSURANCE_USDT=500;
+const DEFAULT_MIN_INSURANCE_USDT=500;
 const AUTH_SERVICE='https://ice-pay-auth.onrender.com';
+const requiredInsurance=()=>Number(confirmedFinance?.minimumInsuranceUSDT ?? DEFAULT_MIN_INSURANCE_USDT);
+const requiredInsuranceLabel=()=>requiredInsurance().toLocaleString('ru-RU',{maximumFractionDigits:2})+' USDT';
 const canStartWork=()=>financeReady&&!!confirmedFinance?.workEligible;
-const financeGateText=()=>!financeReady?'Проверка страхового депозита…':canStartWork()?'Страховой депозит подтверждён. Работа доступна.':'Для работы нужен подтверждённый страховой депозит.';
+const financeGateText=()=>!financeReady?'Проверка страхового депозита…':canStartWork()?'Страховой депозит подтверждён. Работа доступна.':'Для работы нужен подтверждённый страховой депозит от '+requiredInsuranceLabel()+'.';
 function syncWorkControls(){
  for(const input of document.querySelectorAll('#sidebar-work-switch,[data-toggle="working"]')){
   input.checked=!!state.working;
@@ -419,7 +421,9 @@ async function refreshFinance(){
   const result=await fetch(AUTH_SERVICE+'/v1/trader/finance',{headers:{Authorization:'Bearer '+token},cache:'no-store'});
   if(!result.ok)throw Error('Нет ответа от сервера финансов');
   const data=await result.json();
-  if(!data.finance||Number(data.finance.minimumInsuranceUSDT)!==MIN_INSURANCE_USDT)throw Error('Ответ сервера не прошёл проверку');
+  if(!data.finance||!Number.isFinite(Number(data.finance.minimumInsuranceUSDT))||
+       Number(data.finance.minimumInsuranceUSDT)<0||Number(data.finance.minimumInsuranceUSDT)>1000000)
+      throw Error('Ответ сервера не прошёл проверку');
   useFinance(data.finance);
  }catch(e){
   financeReady=false;confirmedFinance=null;state.insurance=0;state.working=false;refresh();syncWorkControls();
@@ -433,7 +437,7 @@ function denyUnverifiedWork(input){
   syncWorkControls();
   const note=document.getElementById('ice-insurance-gate-label');
   if(note){
-   note.textContent='Для работы нужен подтверждённый страховой депозит.';
+   note.textContent=financeGateText();
    note.classList.remove('ice-insurance-flash');
    void note.offsetWidth;
    note.classList.add('ice-insurance-flash');
@@ -965,7 +969,7 @@ function render(inner){
 const notice='';
 function selectPurpose(){
  purpose='';amount='';
- render(notice+'<p class="ice-deposit-hint">Сначала выберите, какой депозит хотите пополнить:</p><div class="ice-deposit-purpose-options"><button type="button" class="ice-deposit-purpose" data-ice-purpose="working"><strong>Рабочий депозит</strong><small>Средства для рабочего баланса трейдера</small></button><button type="button" class="ice-deposit-purpose" data-ice-purpose="insurance"><strong>Страховой депозит</strong><small>Для доступа к работе требуется 500 USDT подтверждённого страхового депозита</small></button></div>');
+ render(notice+'<p class="ice-deposit-hint">Сначала выберите, какой депозит хотите пополнить:</p><div class="ice-deposit-purpose-options"><button type="button" class="ice-deposit-purpose" data-ice-purpose="working"><strong>Рабочий депозит</strong><small>Средства для рабочего баланса трейдера</small></button><button type="button" class="ice-deposit-purpose" data-ice-purpose="insurance"><strong>Страховой депозит</strong><small>Для доступа к работе требуется '+requiredInsuranceLabel()+' подтверждённого страхового депозита</small></button></div>');
 }
 function amountStep(){
  if(!purposes[purpose])return selectPurpose();
