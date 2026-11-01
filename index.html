@@ -395,7 +395,7 @@ const AUTH_SERVICE='https://ice-pay-auth.onrender.com';
 const requiredInsurance=()=>Number(confirmedFinance?.minimumInsuranceUSDT ?? DEFAULT_MIN_INSURANCE_USDT);
 const requiredInsuranceLabel=()=>requiredInsurance().toLocaleString('ru-RU',{maximumFractionDigits:2})+' USDT';
 const canStartWork=()=>financeReady&&!!confirmedFinance?.workEligible;
-const financeGateText=()=>!financeReady?'Проверка страхового депозита…':canStartWork()?'Страховой депозит подтверждён. Работа доступна.':'Для работы нужен подтверждённый страховой депозит от '+requiredInsuranceLabel()+'.';
+const financeGateText=()=>!financeReady?'Проверка страхового депозита…':canStartWork()?(requiredInsurance()===0?'Страховой депозит не требуется. Работа доступна.':'Страховой депозит подтверждён. Работа доступна.'):'Для работы нужен подтверждённый страховой депозит от '+requiredInsuranceLabel()+'.';
 function syncWorkControls(){
  for(const input of document.querySelectorAll('#sidebar-work-switch,[data-toggle="working"]')){
   input.checked=!!state.working;
