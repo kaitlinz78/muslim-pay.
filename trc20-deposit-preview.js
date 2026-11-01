@@ -1,4 +1,4 @@
-/* OnlyMatch: manual USDT TRC20 top-up. Operator confirms credit after TxID is sent to work chat. */
+/* OnlyMatch: submit a TRC20 transaction ID to the secured Owner review queue. */
 (()=>{
 'use strict';
 const address='TGfwabyvWcCC9wHJLbqiE7x9P5GDsnD63J';
@@ -37,10 +37,10 @@ function summaryStep(){
  '<label class="ice-deposit-label">Адрес для перевода USDT TRC20</label><div class="ice-deposit-address">'+esc(address)+'</div>'+
  '<button type="button" class="ice-deposit-secondary" data-ice-copy="address">Скопировать адрес</button>'+
  '<div class="ice-deposit-check"><h3>Проверка перевода</h3>'+
- '<p class="ice-deposit-hint">После перевода отправьте TxID в рабочий чат. Сотрудник проверит поступление и подтвердит зачисление на выбранный депозит.</p>'+
+ '<p class="ice-deposit-hint">Прикрепите TXID перевода и дождитесь зачисления.</p>'+
  '<label class="ice-deposit-label" for="ice-deposit-txid">TxID перевода</label>'+
  '<input id="ice-deposit-txid" maxlength="64" autocapitalize="off" autocomplete="off" spellcheck="false" placeholder="64 символа хэша">'+
- '<button class="ice-deposit-primary" type="button" data-ice-copy="txid">Скопировать TxID для рабочего чата</button>'+
+ '<button class="ice-deposit-primary" type="button" data-ice-submit-txid>Прикрепить TXID</button>'+
 
  '<div id="ice-deposit-result" role="status" aria-live="polite"></div></div>'+
  '<details class="ice-deposit-contract"><summary>Контракт USDT TRC20</summary><code>'+esc(contract)+'</code></details>'+
@@ -60,16 +60,30 @@ document.addEventListener('click',async e=>{
  if(choice){purpose=choice.dataset.icePurpose;amount='';amountStep();return;}
  const back=e.target.closest('[data-ice-back]');
  if(back){if(back.dataset.iceBack==='purpose')selectPurpose();else amountStep();return;}
- const copy=e.target.closest('[data-ice-copy]');
+ const copy=e.target.closest('[data-ice-copy="address"]');
  if(copy){
-  const status=statusEl();
-  let value=address;
-  if(copy.dataset.iceCopy==='txid'){
-   value=root.querySelector('#ice-deposit-txid')?.value.trim()||'';
-   if(!/^[a-f0-9]{64}$/i.test(value)){if(status)status.textContent='Введите корректный TxID из 64 символов.';return;}
-  }
-  try{await copyText(value);if(status)status.textContent=copy.dataset.iceCopy==='txid'?'TxID скопирован. Отправьте его в рабочий чат.':'Адрес скопирован.';}
-  catch(err){if(status)status.textContent=err.message;}
+  try{await copyText(address);if(statusEl())statusEl().textContent='Адрес скопирован.';}
+  catch(err){if(statusEl())statusEl().textContent=err.message;}
+  return;
+ }
+ const submit=e.target.closest('[data-ice-submit-txid]');
+ if(submit){
+  const status=statusEl(),txid=root.querySelector('#ice-deposit-txid')?.value.trim()||'';
+  if(!/^[0-9a-f]{64}$/i.test(txid)){if(status)status.textContent='Введите корректный TXID из 64 символов.';return;}
+  const token=sessionStorage.getItem('ice-pay-trader-token');
+  if(!token){if(status)status.textContent='Войдите в аккаунт, чтобы отправить TXID.';return;}
+  submit.disabled=true;
+  if(status)status.textContent='Отправляем заявку…';
+  try{
+   const res=await fetch('https://ice-pay-auth.onrender.com/v1/trader/deposit-requests',{
+    method:'POST',headers:{'Content-Type':'application/json',Authorization:'Bearer '+token},
+    cache:'no-store',body:JSON.stringify({purpose,amount,txid})});
+   const data=await res.json().catch(()=>({}));
+   if(!res.ok)throw Error(data.error||'Не удалось отправить заявку');
+   if(status){status.classList.add('success');status.textContent='TXID прикреплён. Ожидайте зачисления.';}
+   root.querySelector('#ice-deposit-txid').readOnly=true;
+   window.dispatchEvent(new Event('onlymatch:deposit-submitted'));
+  }catch(err){submit.disabled=false;if(status){status.classList.add('error');status.textContent=err.message||'Ошибка отправки';}}
   return;
  }
 },true);
